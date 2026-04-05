@@ -336,9 +336,9 @@ export default function HomePage() {
             <motion.h1
               variants={fadeUp}
               transition={{ duration: 0.6 }}
-              className="font-bold max-w-[800px] mb-6"
+              className="font-normal max-w-[800px] mb-6"
               style={{
-                fontSize: 'clamp(36px, 5vw, 56px)',
+                fontSize: 'clamp(40px, 5.5vw, 64px)',
                 lineHeight: 1.1,
                 color: '#FFFFFF',
               }}
