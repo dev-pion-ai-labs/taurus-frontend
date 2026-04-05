@@ -301,16 +301,11 @@ export default function HomePage() {
         id="hero"
         className="relative overflow-hidden"
         style={{
-          backgroundImage: 'url(/hero-bg.jpg)',
-          backgroundSize: 'cover',
-          backgroundPosition: 'center',
-          backgroundRepeat: 'no-repeat',
+          background: 'linear-gradient(180deg, #FEF3C7 0%, #FECACA 30%, #FDE68A 60%, #FFF7ED 85%, #FFFFFF 100%)',
           paddingTop: 140,
-          paddingBottom: 100,
+          paddingBottom: 0,
         }}
       >
-        {/* Dark overlay for readability */}
-        <div className="absolute inset-0 bg-black/40" />
         <div className="relative z-10 max-w-[1200px] mx-auto px-6">
           <motion.div
             className="flex flex-col items-center text-center"
@@ -326,7 +321,7 @@ export default function HomePage() {
               style={{
                 fontSize: 12,
                 letterSpacing: 4,
-                color: 'rgba(255,255,255,0.7)',
+                color: '#78716C',
               }}
             >
               AI Transformation Operating System
@@ -340,7 +335,7 @@ export default function HomePage() {
               style={{
                 fontSize: 'clamp(40px, 5.5vw, 64px)',
                 lineHeight: 1.1,
-                color: '#FFFFFF',
+                color: '#1C1917',
               }}
             >
               Design Your AI Transformation with Precision.
@@ -354,7 +349,7 @@ export default function HomePage() {
               style={{
                 fontSize: 17,
                 fontWeight: 400,
-                color: 'rgba(255,255,255,0.8)',
+                color: '#57534E',
                 lineHeight: 1.7,
               }}
             >
@@ -371,10 +366,10 @@ export default function HomePage() {
             >
               <Link
                 href="/login"
-                className="inline-flex items-center justify-center text-white font-medium rounded-full transition-all hover:-translate-y-0.5 hover:shadow-md"
+                className="inline-flex items-center justify-center font-medium rounded-full transition-all hover:-translate-y-0.5 hover:shadow-md"
                 style={{
-                  backgroundColor: '#FFFFFF',
-                  color: '#1C1917',
+                  backgroundColor: '#1C1917',
+                  color: '#FFFFFF',
                   height: 48,
                   paddingLeft: 32,
                   paddingRight: 32,
@@ -386,10 +381,10 @@ export default function HomePage() {
               </Link>
               <Link
                 href="#contact"
-                className="inline-flex items-center justify-center font-medium rounded-full border transition-all hover:bg-white/10"
+                className="inline-flex items-center justify-center font-medium rounded-full border transition-all hover:bg-white/40"
                 style={{
-                  color: '#FFFFFF',
-                  borderColor: 'rgba(255,255,255,0.3)',
+                  color: '#1C1917',
+                  borderColor: '#1C1917',
                   height: 48,
                   paddingLeft: 32,
                   paddingRight: 32,
@@ -570,19 +565,11 @@ export default function HomePage() {
             </motion.div>
           </motion.div>
         </div>
-      </section>
 
-      {/* ============================================================ */}
-      {/*  SECTION 2: SOCIAL PROOF                                     */}
-      {/* ============================================================ */}
-      <section style={{ backgroundColor: '#FFFFFF' }}>
+        {/* Social proof — inside hero gradient */}
         <div
-          className="max-w-[1200px] mx-auto px-6 border-t border-b"
-          style={{
-            paddingTop: 48,
-            paddingBottom: 48,
-            borderColor: '#E7E5E4',
-          }}
+          className="max-w-[1200px] mx-auto px-6"
+          style={{ paddingTop: 80, paddingBottom: 80 }}
         >
           <motion.div
             initial="hidden"
@@ -627,8 +614,9 @@ export default function HomePage() {
       {/* ============================================================ */}
       <section
         id="features"
+        className="relative z-10"
         style={{
-          backgroundColor: '#F5F5F4',
+          background: 'linear-gradient(180deg, #FFFFFF 0%, #FEF9F0 30%, #FEFCE8 60%, #FFF7ED 100%)',
           paddingTop: 100,
           paddingBottom: 100,
         }}
@@ -722,64 +710,70 @@ export default function HomePage() {
               </AnimatePresence>
             </motion.div>
 
-            {/* 2x2 feature cards */}
-            <motion.div
-              variants={staggerContainer}
-              initial="hidden"
-              whileInView="visible"
-              viewport={{ once: true, margin: '-50px' }}
-              className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6"
-            >
+            {/* Stacking scroll cards */}
+            <div className="space-y-6 pb-[20vh]">
               {[
                 {
                   icon: BarChart3,
                   title: 'Data Driven Insights',
-                  desc: 'Transform raw data into actionable intelligence with AI-powered analytics and visualization.',
+                  desc: 'Transform raw data into actionable intelligence with AI-powered analytics and visualization. Identify opportunities and predict ROI with our comprehensive dashboards.',
+                  gradient: 'linear-gradient(135deg, #FFF7ED, #FEF3C7)',
                 },
                 {
                   icon: Bell,
                   title: 'Smart Notifications',
-                  desc: 'Stay informed with intelligent alerts that prioritize what matters most to your transformation.',
+                  desc: 'Stay informed with intelligent alerts that prioritize what matters most to your transformation. Get personalized updates for critical milestones and deadlines.',
+                  gradient: 'linear-gradient(135deg, #FEF3C7, #FDE68A)',
                 },
                 {
                   icon: Zap,
                   title: 'Automated Task Management',
-                  desc: 'Streamline workflows with AI-powered task automation, assignment, and progress tracking.',
+                  desc: 'Streamline workflows with AI-powered task automation, assignment, and progress tracking. Eliminate repetitive work so your team can focus on meaningful impact.',
+                  gradient: 'linear-gradient(135deg, #FFF1F2, #FECACA)',
                 },
                 {
                   icon: Users,
                   title: 'Team Collaboration Hub',
-                  desc: 'Unite your team with real-time collaboration tools designed for transformation initiatives.',
+                  desc: 'Unite your team with real-time collaboration tools designed for transformation initiatives. Share insights, assign tasks, and track progress seamlessly.',
+                  gradient: 'linear-gradient(135deg, #FECACA, #FEF3C7)',
                 },
-              ].map((card) => (
+              ].map((card, i) => (
                 <motion.div
                   key={card.title}
-                  variants={fadeUp}
-                  transition={{ duration: 0.5 }}
-                  className="rounded-2xl border p-8 transition-all hover:-translate-y-1 hover:shadow-md"
+                  initial={{ opacity: 0, y: 40 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true, margin: '-100px' }}
+                  transition={{ duration: 0.5, delay: i * 0.05 }}
+                  className="sticky rounded-2xl border p-8 md:p-10 shadow-sm"
                   style={{
-                    backgroundColor: '#FFFFFF',
-                    borderColor: '#E7E5E4',
+                    top: `${120 + i * 20}px`,
+                    background: card.gradient,
+                    borderColor: 'rgba(231,229,228,0.6)',
+                    zIndex: i + 1,
                   }}
                 >
-                  <div
-                    className="w-12 h-12 rounded-full flex items-center justify-center mb-4"
-                    style={{ backgroundColor: '#F5F5F4' }}
-                  >
-                    <card.icon className="w-5 h-5" style={{ color: '#1C1917' }} />
+                  <div className="flex flex-col md:flex-row md:items-center gap-6">
+                    <div
+                      className="w-14 h-14 rounded-2xl flex items-center justify-center shrink-0"
+                      style={{ backgroundColor: 'rgba(255,255,255,0.7)' }}
+                    >
+                      <card.icon className="w-6 h-6" style={{ color: '#1C1917' }} />
+                    </div>
+                    <div>
+                      <h4
+                        className="text-lg font-semibold mb-2"
+                        style={{ color: '#1C1917' }}
+                      >
+                        {card.title}
+                      </h4>
+                      <p className="text-sm leading-relaxed max-w-xl" style={{ color: '#57534E' }}>
+                        {card.desc}
+                      </p>
+                    </div>
                   </div>
-                  <h4
-                    className="text-base font-semibold mb-2"
-                    style={{ color: '#1C1917' }}
-                  >
-                    {card.title}
-                  </h4>
-                  <p className="text-sm leading-relaxed" style={{ color: '#78716C' }}>
-                    {card.desc}
-                  </p>
                 </motion.div>
               ))}
-            </motion.div>
+            </div>
           </motion.div>
         </div>
       </section>
@@ -789,8 +783,9 @@ export default function HomePage() {
       {/* ============================================================ */}
       <section
         id="process"
+        className="relative z-10"
         style={{
-          backgroundColor: '#FFFFFF',
+          background: 'linear-gradient(180deg, #FFF7ED 0%, #FFFFFF 40%, #FFF1F2 100%)',
           paddingTop: 100,
           paddingBottom: 100,
         }}
@@ -893,8 +888,9 @@ export default function HomePage() {
       {/* ============================================================ */}
       <section
         id="pricing"
+        className="relative z-10"
         style={{
-          backgroundColor: '#F5F5F4',
+          background: 'linear-gradient(180deg, #FFF1F2 0%, #FEF3C7 40%, #FDE68A 70%, #FECACA 100%)',
           paddingTop: 100,
           paddingBottom: 100,
         }}
@@ -981,8 +977,9 @@ export default function HomePage() {
       {/*  SECTION 6: TESTIMONIALS                                     */}
       {/* ============================================================ */}
       <section
+        className="relative z-10"
         style={{
-          backgroundColor: '#FFFFFF',
+          background: 'linear-gradient(180deg, #FECACA 0%, #FFF7ED 30%, #FFFFFF 100%)',
           paddingTop: 100,
           paddingBottom: 100,
         }}
@@ -1106,8 +1103,9 @@ export default function HomePage() {
       {/*  SECTION 7: CTA BANNER                                       */}
       {/* ============================================================ */}
       <section
+        className="relative z-10"
         style={{
-          backgroundColor: '#FFFFFF',
+          background: 'linear-gradient(180deg, #FFFFFF 0%, #FEF9F0 100%)',
           paddingTop: 0,
           paddingBottom: 100,
         }}
@@ -1125,7 +1123,7 @@ export default function HomePage() {
               className="rounded-3xl p-10 md:p-16 text-center"
               style={{
                 background:
-                  'linear-gradient(135deg, #F5F5F4, #E7E5E4, #D6D3D1)',
+                  'linear-gradient(135deg, #FEF3C7, #FECACA, #FDE68A)',
               }}
             >
               <h2
@@ -1184,8 +1182,9 @@ export default function HomePage() {
       {/*  SECTION 8: FOOTER                                           */}
       {/* ============================================================ */}
       <footer
+        className="relative z-10"
         style={{
-          backgroundColor: '#FFFFFF',
+          background: 'linear-gradient(180deg, #FEF9F0 0%, #FFFFFF 30%, #FFFFFF 100%)',
           paddingTop: 64,
           paddingBottom: 48,
         }}
