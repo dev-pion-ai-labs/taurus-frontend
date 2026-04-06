@@ -370,7 +370,7 @@ function OrganizationTab({ user }: { user: User }) {
                 Company size
               </Label>
               <Select
-                value={currentSize || undefined}
+                value={currentSize ?? ""}
                 onValueChange={(val) => {
                   if (val) setValue('size', val, { shouldDirty: true });
                 }}
