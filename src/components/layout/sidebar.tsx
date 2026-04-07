@@ -5,6 +5,8 @@ import Link from 'next/link';
 import {
   LayoutDashboard,
   ClipboardList,
+  Building2,
+  Network,
   Settings,
   FileText,
   LogOut,
@@ -30,6 +32,8 @@ interface NavItem {
 const navItems: NavItem[] = [
   { label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
   { label: 'Consultations', href: '/dashboard#sessions', icon: ClipboardList },
+  { label: 'Company Profile', href: '/company-profile', icon: Building2 },
+  { label: 'Departments', href: '/departments', icon: Network },
   { label: 'Settings', href: '/settings', icon: Settings },
   { label: 'Templates', href: '/admin/templates', icon: FileText, adminOnly: true },
 ];

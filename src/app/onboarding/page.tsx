@@ -130,7 +130,11 @@ export default function OnboardingPage() {
   useEffect(() => {
     if (!hydrated || isLoadingUser || !user) return;
     if (user.organizationId) {
-      router.replace('/dashboard');
+      if (user.onboardingCompleted) {
+        router.replace('/dashboard');
+      } else {
+        router.replace('/questionnaire');
+      }
     }
   }, [hydrated, isLoadingUser, user, router]);
 
@@ -161,7 +165,7 @@ export default function OnboardingPage() {
         onSuccess: () => {
           setShowSuccess(true);
           setTimeout(() => {
-            router.replace('/dashboard');
+            router.replace('/questionnaire');
           }, 1500);
         },
         onError: (error) => {
