@@ -1,12 +1,8 @@
 import { useAuthStore } from '@/stores/auth-store';
 
-// In production, NEXT_PUBLIC_API_URL is set to the Railway internal DNS
-// (e.g. http://taurus-backend.railway.internal/api/v1) so requests go
-// directly to the backend service.
-// In local development the variable is unset and we fall back to a relative
-// path that Next.js proxies to the local backend via the rewrite in
-// next.config.ts (see BACKEND_URL there, defaults to http://localhost:3000).
-const BASE_URL = process.env.NEXT_PUBLIC_API_URL || '/api/v1';
+// Always use a relative path so the browser talks to the frontend origin.
+// Next.js rewrites proxy these requests to the backend (see next.config.ts).
+const BASE_URL = '/api/v1';
 
 let isRefreshing = false;
 let refreshPromise: Promise<boolean> | null = null;
