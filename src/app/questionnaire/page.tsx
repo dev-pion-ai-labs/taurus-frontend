@@ -22,6 +22,7 @@ import { StepDocuments } from '@/components/questionnaire/step-documents';
 import { StepTools } from '@/components/questionnaire/step-tools';
 import { StepGoals } from '@/components/questionnaire/step-goals';
 import { QUESTIONNAIRE_STEPS } from '@/lib/constants';
+import type { OnboardingData } from '@/types';
 
 // ---------------------------------------------------------------------------
 // Animation Variants
@@ -166,8 +167,9 @@ export default function QuestionnairePage() {
   // Final submission
   // ---------------------------------------------------------------------------
 
-  const handleFinalSubmit = useCallback(() => {
-    submitOnboarding.mutate(formData, {
+  const handleFinalSubmit = useCallback((lastStepData?: Partial<OnboardingData>) => {
+    const finalData = lastStepData ? { ...formData, ...lastStepData } : formData;
+    submitOnboarding.mutate(finalData, {
       onSuccess: () => {
         setShowSuccess(true);
         reset();

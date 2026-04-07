@@ -34,7 +34,7 @@ const GOAL_ICONS = [
 ];
 
 interface StepGoalsProps {
-  onSubmit: () => void;
+  onSubmit: (lastStepData?: Partial<{ selectedGoals: string[]; customGoals: string }>) => void;
   onBack: () => void;
   isSubmitting: boolean;
 }
@@ -59,11 +59,13 @@ export function StepGoals({ onSubmit: handleFinalSubmit, onBack, isSubmitting }:
       setError('Select at least one goal or describe your own');
       return;
     }
-    updateFormData({
+    // Update store first, then submit with the latest data merged in
+    const updatedFields = {
       selectedGoals: selected,
       customGoals: custom.trim(),
-    });
-    handleFinalSubmit();
+    };
+    updateFormData(updatedFields);
+    handleFinalSubmit(updatedFields);
   };
 
   return (
