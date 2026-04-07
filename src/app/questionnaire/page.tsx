@@ -81,8 +81,8 @@ export default function QuestionnairePage() {
 
     if (!formData.companyName && user.organization) {
       updateFormData({
-        companyName: user.organization.name,
-        industryId: user.organization.industryId,
+        companyName: user.organization.name || '',
+        industryId: user.organization.industryId || '',
         companySize: user.organization.size || '',
       });
     }
@@ -112,7 +112,7 @@ export default function QuestionnairePage() {
 
   useEffect(() => {
     if (!hydrated || isLoadingUser || !user) return;
-    if (!user.organizationId) {
+    if (!user.firstName || !user.lastName) {
       router.replace('/onboarding');
       return;
     }
@@ -197,7 +197,7 @@ export default function QuestionnairePage() {
       </div>
     );
   }
-  if (!user?.organizationId) return null;
+  if (!user?.firstName || !user?.lastName) return null;
   if (user?.onboardingCompleted) return null;
 
   // ---------------------------------------------------------------------------

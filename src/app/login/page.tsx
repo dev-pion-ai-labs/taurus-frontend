@@ -72,7 +72,7 @@ export default function LoginPage() {
   useEffect(() => {
     if (!hydrated) return;
     if (accessToken && user) {
-      if (!user.organizationId) {
+      if (!user.firstName || !user.lastName) {
         router.replace('/onboarding');
       } else if (!user.onboardingCompleted) {
         router.replace('/questionnaire');
@@ -88,7 +88,7 @@ export default function LoginPage() {
 
   useEffect(() => {
     if (verifyOtp.isSuccess && user) {
-      if (!user.organizationId) {
+      if (!user.firstName || !user.lastName) {
         router.replace('/onboarding');
       } else if (!user.onboardingCompleted) {
         router.replace('/questionnaire');

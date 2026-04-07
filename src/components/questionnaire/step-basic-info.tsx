@@ -1,12 +1,16 @@
 'use client';
 
+import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { toast } from 'sonner';
 import { Loader2, ArrowRight, Building2, Users } from 'lucide-react';
 import { IndustryCombobox } from '@/components/onboarding/industry-combobox';
 import { COMPANY_SIZES } from '@/lib/constants';
 import { useOnboardingStore } from '@/stores/onboarding-store';
+import { useCreateOrg } from '@/hooks/use-organizations';
+import { useAuthStore } from '@/stores/auth-store';
 
 const schema = z.object({
   companyName: z.string().min(1, 'Company name is required'),
@@ -33,6 +37,9 @@ interface StepBasicInfoProps {
 
 export function StepBasicInfo({ onNext, isSaving }: StepBasicInfoProps) {
   const { formData, updateFormData } = useOnboardingStore();
+  const user = useAuthStore((s) => s.user);
+  const createOrg = useCreateOrg();
+  const [isCreatingOrg, setIsCreatingOrg] = useState(false);
 
   const {
     register,
@@ -53,15 +60,39 @@ export function StepBasicInfo({ onNext, isSaving }: StepBasicInfoProps) {
   const industryId = watch('industryId');
   const selectedSize = watch('companySize');
 
-  const onSubmit = (data: FormData) => {
+  const onSubmit = async (data: FormData) => {
     updateFormData({
       companyName: data.companyName,
       industryId: data.industryId,
       customIndustry: data.customIndustry || '',
       companySize: data.companySize || '',
     });
+
+    // Create org if user doesn't have one yet
+    if (!user?.organizationId) {
+      setIsCreatingOrg(true);
+      try {
+        await createOrg.mutateAsync({
+          name: data.companyName,
+          industryId: data.industryId,
+          size: data.companySize || undefined,
+        });
+      } catch (error) {
+        toast.error(
+          error instanceof Error
+            ? error.message
+            : 'Failed to create organization'
+        );
+        setIsCreatingOrg(false);
+        return;
+      }
+      setIsCreatingOrg(false);
+    }
+
     onNext();
   };
+
+  const isSubmitting = isSaving || isCreatingOrg;
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
@@ -90,7 +121,7 @@ export function StepBasicInfo({ onNext, isSaving }: StepBasicInfoProps) {
             id="companyName"
             type="text"
             placeholder="Acme Inc."
-            disabled={isSaving}
+            disabled={isSubmitting}
             className="h-12 w-full rounded-xl border border-[#E7E5E4] bg-[#FAFAF9] pl-10 pr-4 text-sm text-[#1C1917] outline-none transition-all placeholder:text-[#A8A29E] focus:border-[#1C1917] focus:bg-white focus:ring-2 focus:ring-[#1C1917]/10 disabled:cursor-not-allowed disabled:opacity-50"
           />
         </div>
@@ -119,7 +150,7 @@ export function StepBasicInfo({ onNext, isSaving }: StepBasicInfoProps) {
           {...register('customIndustry')}
           type="text"
           placeholder="Or type a custom industry..."
-          disabled={isSaving}
+          disabled={isSubmitting}
           className="h-12 w-full rounded-xl border border-[#E7E5E4] bg-[#FAFAF9] px-4 text-sm text-[#1C1917] outline-none transition-all placeholder:text-[#A8A29E] focus:border-[#1C1917] focus:bg-white focus:ring-2 focus:ring-[#1C1917]/10 disabled:cursor-not-allowed disabled:opacity-50"
         />
       </div>
@@ -137,7 +168,7 @@ export function StepBasicInfo({ onNext, isSaving }: StepBasicInfoProps) {
                 key={size}
                 type="button"
                 onClick={() => setValue('companySize', size)}
-                disabled={isSaving}
+                disabled={isSubmitting}
                 className={`group relative flex flex-col items-center gap-1 rounded-xl border-2 px-2 py-3.5 transition-all duration-200 disabled:cursor-not-allowed disabled:opacity-50 ${
                   isSelected
                     ? 'border-[#1C1917] bg-[#1C1917] shadow-md'
@@ -173,10 +204,10 @@ export function StepBasicInfo({ onNext, isSaving }: StepBasicInfoProps) {
       <div className="flex items-center justify-end pt-2">
         <button
           type="submit"
-          disabled={isSaving}
+          disabled={isSubmitting}
           className="inline-flex h-11 items-center gap-2 rounded-xl bg-[#1C1917] px-6 text-sm font-semibold text-white transition-all hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
         >
-          {isSaving ? (
+          {isSubmitting ? (
             <Loader2 className="h-4 w-4 animate-spin" />
           ) : (
             <>

@@ -30,12 +30,12 @@ export function ProtectedRoute({
       return;
     }
 
-    if (user && !user.organizationId && requireOrg) {
+    if (user && (!user.firstName || !user.lastName) && requireOrg) {
       router.replace('/onboarding');
       return;
     }
 
-    if (user && user.organizationId && !user.onboardingCompleted && requireOrg) {
+    if (user && !user.onboardingCompleted && requireOrg) {
       router.replace('/questionnaire');
       return;
     }
