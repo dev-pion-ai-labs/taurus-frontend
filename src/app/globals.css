@@ -191,3 +191,45 @@
 ::-webkit-scrollbar-thumb:hover {
   background: #A8A29E;
 }
+
+/* Print / PDF export styles */
+@media print {
+  body {
+    background: #fff !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  /* Hide interactive elements */
+  button,
+  [data-pdf-hide] {
+    display: none !important;
+  }
+
+  /* Ensure charts render properly */
+  .recharts-wrapper {
+    overflow: visible !important;
+  }
+
+  /* Remove shadows for clean print */
+  * {
+    box-shadow: none !important;
+  }
+}
+
+/* Chart fade-in animation */
+@keyframes chart-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-chart-in {
+  animation: chart-fade-in 500ms ease-out forwards;
+  opacity: 0;
+}
