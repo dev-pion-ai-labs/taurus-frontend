@@ -102,3 +102,35 @@ export async function apiClient<T>(
   const json = await res.json();
   return json.data as T;
 }
+
+export async function uploadFile<T>(
+  endpoint: string,
+  formData: FormData
+): Promise<T> {
+  const { accessToken } = useAuthStore.getState();
+
+  const headers: Record<string, string> = {};
+  if (accessToken) {
+    headers['Authorization'] = `Bearer ${accessToken}`;
+  }
+
+  const res = await fetch(`${BASE_URL}${endpoint}`, {
+    method: 'POST',
+    headers,
+    body: formData,
+  });
+
+  if (!res.ok) {
+    const errorBody = await res.json().catch(() => ({
+      message: 'Upload failed',
+    }));
+    throw new ApiError(
+      res.status,
+      errorBody.message || 'Upload failed',
+      errorBody.errors
+    );
+  }
+
+  const json = await res.json();
+  return json.data as T;
+}

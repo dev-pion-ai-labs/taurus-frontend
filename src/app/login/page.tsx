@@ -7,7 +7,7 @@ import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Sparkles, ArrowRight, BarChart3, Zap, Shield } from 'lucide-react';
 import { useSendOtp, useVerifyOtp } from '@/hooks/use-auth';
 import { useMe } from '@/hooks/use-user';
 import { useAuthStore } from '@/stores/auth-store';
@@ -60,7 +60,6 @@ export default function LoginPage() {
     register,
     handleSubmit,
     formState: { errors },
-    getValues,
   } = useForm<EmailFormData>({
     resolver: zodResolver(emailSchema),
     defaultValues: { email: '' },
@@ -73,10 +72,12 @@ export default function LoginPage() {
   useEffect(() => {
     if (!hydrated) return;
     if (accessToken && user) {
-      if (user.organizationId) {
-        router.replace('/dashboard');
-      } else {
+      if (!user.firstName || !user.lastName) {
         router.replace('/onboarding');
+      } else if (!user.onboardingCompleted) {
+        router.replace('/questionnaire');
+      } else {
+        router.replace('/dashboard');
       }
     }
   }, [hydrated, accessToken, user, router]);
@@ -87,10 +88,12 @@ export default function LoginPage() {
 
   useEffect(() => {
     if (verifyOtp.isSuccess && user) {
-      if (user.organizationId) {
-        router.replace('/dashboard');
-      } else {
+      if (!user.firstName || !user.lastName) {
         router.replace('/onboarding');
+      } else if (!user.onboardingCompleted) {
+        router.replace('/questionnaire');
+      } else {
+        router.replace('/dashboard');
       }
     }
   }, [verifyOtp.isSuccess, user, router]);
@@ -195,20 +198,123 @@ export default function LoginPage() {
   // ---------------------------------------------------------------------------
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-[#F5F5F4] px-4">
-      <div className="w-full max-w-[400px]">
-        {/* Wordmark */}
-        <div className="mb-8 text-center">
-          <h1
-            className="text-[20px] font-bold tracking-tight text-[#1C1917]"
-            style={{ fontFamily: 'var(--font-sans)' }}
-          >
-            Taurus
-          </h1>
+    <div className="flex min-h-screen">
+      {/* Left Panel — Brand / Visual */}
+      <div
+        className="hidden lg:flex lg:w-1/2 xl:w-[55%] relative overflow-hidden flex-col justify-between p-12"
+        style={{
+          background:
+            'linear-gradient(135deg, #1C1917 0%, #292524 40%, #1C1917 100%)',
+        }}
+      >
+        {/* Decorative gradient orbs */}
+        <div
+          className="absolute top-[-20%] right-[-10%] w-[500px] h-[500px] rounded-full opacity-30 blur-[120px]"
+          style={{ background: 'linear-gradient(135deg, #E11D48, #F59E0B)' }}
+        />
+        <div
+          className="absolute bottom-[-15%] left-[-10%] w-[400px] h-[400px] rounded-full opacity-20 blur-[100px]"
+          style={{ background: 'linear-gradient(135deg, #F59E0B, #E11D48)' }}
+        />
+
+        {/* Subtle grid pattern */}
+        <div
+          className="absolute inset-0 opacity-[0.04]"
+          style={{
+            backgroundImage:
+              'linear-gradient(rgba(255,255,255,0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.1) 1px, transparent 1px)',
+            backgroundSize: '60px 60px',
+          }}
+        />
+
+        {/* Top — Logo */}
+        <div className="relative z-10">
+          <div className="flex items-center gap-2.5">
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/10 backdrop-blur-sm">
+              <Sparkles className="h-4.5 w-4.5 text-white" />
+            </div>
+            <span className="text-[20px] font-bold tracking-tight text-white">
+              Taurus
+            </span>
+          </div>
         </div>
 
-        {/* Card */}
-        <div className="rounded-xl border border-[#E7E5E4] bg-white p-8 shadow-sm">
+        {/* Center — Hero Content */}
+        <div className="relative z-10 max-w-md">
+          <motion.h2
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.1 }}
+            className="text-[40px] font-bold leading-[1.1] tracking-tight text-white mb-4"
+          >
+            Your AI
+            <br />
+            Transformation
+            <br />
+            Starts Here.
+          </motion.h2>
+
+          <motion.p
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.25 }}
+            className="text-[16px] leading-relaxed text-white/60 mb-10 max-w-sm"
+          >
+            Discover, strategize, and implement AI across your
+            organization with precision and measurable ROI.
+          </motion.p>
+
+          {/* Feature pills */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.4 }}
+            className="flex flex-col gap-3"
+          >
+            {[
+              { icon: BarChart3, text: 'AI maturity assessment with $ values' },
+              { icon: Zap, text: 'Industry-specific transformation roadmap' },
+              { icon: Shield, text: 'Board-ready reports in minutes' },
+            ].map((item) => (
+              <div
+                key={item.text}
+                className="flex items-center gap-3 rounded-xl bg-white/[0.06] backdrop-blur-sm border border-white/[0.08] px-4 py-3"
+              >
+                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white/10">
+                  <item.icon className="h-4 w-4 text-white/70" />
+                </div>
+                <span className="text-[13px] font-medium text-white/70">
+                  {item.text}
+                </span>
+              </div>
+            ))}
+          </motion.div>
+        </div>
+
+        {/* Bottom — Footer */}
+        <div className="relative z-10">
+          <p className="text-[12px] text-white/30">
+            &copy; {new Date().getFullYear()} MARQAIT AI. All rights reserved.
+          </p>
+        </div>
+      </div>
+
+      {/* Right Panel — Login Form */}
+      <div className="flex w-full lg:w-1/2 xl:w-[45%] items-center justify-center bg-white px-6 py-12">
+        <div className="w-full max-w-[400px]">
+          {/* Mobile logo — only on small screens */}
+          <div className="mb-10 lg:hidden">
+            <div className="flex items-center gap-2.5">
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#1C1917]">
+                <Sparkles className="h-4.5 w-4.5 text-white" />
+              </div>
+              <span className="text-[20px] font-bold tracking-tight text-[#1C1917]">
+                Taurus
+              </span>
+            </div>
+          </div>
+
+          {/* Form Card */}
           <AnimatePresence mode="wait">
             {step === 'email' ? (
               <motion.div
@@ -218,20 +324,20 @@ export default function LoginPage() {
                 exit={{ opacity: 0, x: -20 }}
                 transition={{ duration: 0.2, ease: 'easeOut' }}
               >
-                <div className="mb-6 text-center">
-                  <h2 className="text-lg font-semibold text-[#1C1917]">
+                <div className="mb-8">
+                  <h2 className="text-[28px] font-bold tracking-tight text-[#1C1917]">
                     Welcome back
                   </h2>
-                  <p className="mt-1 text-sm text-[#78716C]">
+                  <p className="mt-2 text-[15px] text-[#78716C]">
                     Enter your email to sign in to your account
                   </p>
                 </div>
 
-                <form onSubmit={handleSubmit(onSendOtp)} className="space-y-4">
+                <form onSubmit={handleSubmit(onSendOtp)} className="space-y-5">
                   <div>
                     <label
                       htmlFor="email"
-                      className="mb-1.5 block text-sm font-medium text-[#1C1917]"
+                      className="mb-2 block text-[13px] font-medium text-[#1C1917]"
                     >
                       Email address
                     </label>
@@ -243,10 +349,10 @@ export default function LoginPage() {
                       autoComplete="email"
                       autoFocus
                       disabled={sendOtp.isPending}
-                      className="h-10 w-full rounded-[8px] border border-[#E7E5E4] bg-white px-3 text-sm text-[#1C1917] outline-none transition-colors placeholder:text-[#A8A29E] focus:border-[#1C1917] focus:ring-2 focus:ring-[#1C1917]/10 disabled:cursor-not-allowed disabled:opacity-50"
+                      className="h-12 w-full rounded-xl border border-[#E7E5E4] bg-[#FAFAF9] px-4 text-[14px] text-[#1C1917] outline-none transition-all placeholder:text-[#A8A29E] focus:border-[#1C1917] focus:bg-white focus:ring-2 focus:ring-[#1C1917]/10 disabled:cursor-not-allowed disabled:opacity-50"
                     />
                     {errors.email && (
-                      <p className="mt-1.5 text-xs text-[#EF4444]">
+                      <p className="mt-2 text-xs text-[#EF4444]">
                         {errors.email.message}
                       </p>
                     )}
@@ -255,15 +361,24 @@ export default function LoginPage() {
                   <button
                     type="submit"
                     disabled={sendOtp.isPending}
-                    className="flex h-10 w-full items-center justify-center rounded-[8px] bg-[#1C1917] text-sm font-medium text-white transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+                    className="flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-[#1C1917] text-[14px] font-semibold text-white transition-all hover:bg-[#292524] hover:shadow-lg disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     {sendOtp.isPending ? (
                       <Loader2 className="h-4 w-4 animate-spin" />
                     ) : (
-                      'Send Code'
+                      <>
+                        Continue
+                        <ArrowRight className="h-4 w-4" />
+                      </>
                     )}
                   </button>
                 </form>
+
+                <p className="mt-8 text-center text-[12px] text-[#A8A29E]">
+                  By continuing, you agree to our Terms of Service
+                  <br />
+                  and Privacy Policy.
+                </p>
               </motion.div>
             ) : (
               <motion.div
@@ -273,12 +388,12 @@ export default function LoginPage() {
                 exit={{ opacity: 0, x: 20 }}
                 transition={{ duration: 0.2, ease: 'easeOut' }}
               >
-                <div className="mb-6 text-center">
-                  <h2 className="text-lg font-semibold text-[#1C1917]">
+                <div className="mb-8">
+                  <h2 className="text-[28px] font-bold tracking-tight text-[#1C1917]">
                     Check your email
                   </h2>
-                  <p className="mt-1 text-sm text-[#78716C]">
-                    We sent a code to{' '}
+                  <p className="mt-2 text-[15px] text-[#78716C]">
+                    We sent a 6-digit code to{' '}
                     <span className="font-medium text-[#1C1917]">
                       {submittedEmail}
                     </span>
@@ -286,13 +401,13 @@ export default function LoginPage() {
                   <button
                     type="button"
                     onClick={onChangeEmail}
-                    className="mt-1 text-xs font-medium text-[#78716C] underline underline-offset-2 transition-colors hover:text-[#1C1917]"
+                    className="mt-1.5 text-[13px] font-medium text-[#E11D48] transition-colors hover:text-[#BE123C]"
                   >
                     Change email
                   </button>
                 </div>
 
-                <div className="space-y-5">
+                <div className="space-y-6">
                   <OtpInput
                     value={otpValue}
                     onChange={setOtpValue}
@@ -307,20 +422,23 @@ export default function LoginPage() {
                       verifyOtp.isPending ||
                       isPostVerifyLoading
                     }
-                    className="flex h-10 w-full items-center justify-center rounded-[8px] bg-[#1C1917] text-sm font-medium text-white transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+                    className="flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-[#1C1917] text-[14px] font-semibold text-white transition-all hover:bg-[#292524] hover:shadow-lg disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     {verifyOtp.isPending || isPostVerifyLoading ? (
                       <Loader2 className="h-4 w-4 animate-spin" />
                     ) : (
-                      'Verify'
+                      <>
+                        Verify & Sign In
+                        <ArrowRight className="h-4 w-4" />
+                      </>
                     )}
                   </button>
 
                   <div className="text-center">
                     {resendTimer > 0 ? (
-                      <p className="text-xs text-[#A8A29E]">
+                      <p className="text-[13px] text-[#A8A29E]">
                         Resend code in{' '}
-                        <span className="font-medium tabular-nums text-[#78716C]">
+                        <span className="font-semibold tabular-nums text-[#78716C]">
                           {resendTimer}s
                         </span>
                       </p>
@@ -329,7 +447,7 @@ export default function LoginPage() {
                         type="button"
                         onClick={onResendCode}
                         disabled={sendOtp.isPending}
-                        className="text-xs font-medium text-[#78716C] underline underline-offset-2 transition-colors hover:text-[#1C1917] disabled:opacity-50"
+                        className="text-[13px] font-medium text-[#78716C] underline underline-offset-2 transition-colors hover:text-[#1C1917] disabled:opacity-50"
                       >
                         {sendOtp.isPending ? 'Sending...' : 'Resend code'}
                       </button>
@@ -340,11 +458,6 @@ export default function LoginPage() {
             )}
           </AnimatePresence>
         </div>
-
-        {/* Footer */}
-        <p className="mt-6 text-center text-xs text-[#A8A29E]">
-          By continuing, you agree to our Terms of Service and Privacy Policy.
-        </p>
       </div>
     </div>
   );

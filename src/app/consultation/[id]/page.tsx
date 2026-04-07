@@ -15,6 +15,8 @@ import {
   useSubmitAnswer,
   useStartSession,
 } from '@/hooks/use-sessions';
+import { useReport, useRegenerateReport } from '@/hooks/use-report';
+import { useMe } from '@/hooks/use-user';
 import type { SessionQuestion } from '@/types';
 
 /* ------------------------------------------------------------------ */
@@ -120,6 +122,11 @@ function CompletedScreen({
   completedAt: string | null;
 }) {
   const router = useRouter();
+  const { data: user } = useMe();
+  const { data: reportData, isError: reportError } = useReport(sessionId);
+  const regenerateReport = useRegenerateReport(sessionId);
+
+  const isAdmin = user?.role === 'ADMIN';
 
   const timeTaken = (() => {
     if (!completedAt || !startedAt) return null;
@@ -129,6 +136,99 @@ function CompletedScreen({
     if (minutes === 1) return '1 minute';
     return `${minutes} minutes`;
   })();
+
+  // Determine report state
+  const reportStatus = reportData?.status ?? null;
+
+  // Render the report section based on status
+  const renderReportSection = () => {
+    // COMPLETED — show CTA button to view the roadmap
+    if (reportStatus === 'COMPLETED') {
+      return (
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.3 }}
+          className="mb-8"
+        >
+          <Link href={`/consultation/${sessionId}/report`}>
+            <Button className="h-11 rounded-full bg-[#1C1917] px-8 text-sm font-medium text-white hover:bg-[#1C1917]/90">
+              View Your Transformation Roadmap
+              <ArrowRight className="ml-2 h-4 w-4" />
+            </Button>
+          </Link>
+        </motion.div>
+      );
+    }
+
+    // GENERATING — show loading animation
+    if (reportStatus === 'GENERATING') {
+      return (
+        <div className="mb-8 rounded-lg border border-[#E7E5E4] bg-white px-5 py-4">
+          <p className="text-sm text-[#78716C]">
+            Your Transformation Roadmap is being generated...
+          </p>
+          <div className="mt-3 flex items-center justify-center gap-1.5">
+            <div className="h-1.5 w-1.5 animate-pulse rounded-full bg-[#0D9488]" />
+            <div className="h-1.5 w-1.5 animate-pulse rounded-full bg-[#0D9488] [animation-delay:150ms]" />
+            <div className="h-1.5 w-1.5 animate-pulse rounded-full bg-[#0D9488] [animation-delay:300ms]" />
+          </div>
+        </div>
+      );
+    }
+
+    // FAILED — show error with optional retry for admins
+    if (reportStatus === 'FAILED') {
+      return (
+        <div className="mb-8 rounded-lg border border-[#E7E5E4] bg-white px-5 py-4">
+          <div className="flex flex-col items-center gap-3">
+            <div className="flex items-center gap-2 text-[#dc2626]">
+              <AlertTriangle className="h-4 w-4" />
+              <p className="text-sm font-medium">Report generation failed</p>
+            </div>
+            {isAdmin && (
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={regenerateReport.isPending}
+                onClick={() => {
+                  regenerateReport.mutate(undefined, {
+                    onError: () => {
+                      toast.error('Failed to regenerate report');
+                    },
+                  });
+                }}
+                className="rounded-full px-4 text-xs"
+              >
+                {regenerateReport.isPending ? (
+                  <span className="flex items-center gap-2">
+                    <Loader2 className="h-3 w-3 animate-spin" />
+                    Regenerating...
+                  </span>
+                ) : (
+                  'Try Again'
+                )}
+              </Button>
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    // No report found / error — show the original placeholder
+    return (
+      <div className="mb-8 rounded-lg border border-[#E7E5E4] bg-white px-5 py-4">
+        <p className="text-sm text-[#78716C]">
+          Your AI transformation report is being generated...
+        </p>
+        <div className="mt-3 flex items-center justify-center gap-1.5">
+          <div className="h-1.5 w-1.5 animate-pulse rounded-full bg-[#0D9488]" />
+          <div className="h-1.5 w-1.5 animate-pulse rounded-full bg-[#0D9488] [animation-delay:150ms]" />
+          <div className="h-1.5 w-1.5 animate-pulse rounded-full bg-[#0D9488] [animation-delay:300ms]" />
+        </div>
+      </div>
+    );
+  };
 
   return (
     <div className="flex min-h-[60vh] flex-col items-center justify-center text-center">
@@ -156,21 +256,16 @@ function CompletedScreen({
           {timeTaken && <p>Time taken: {timeTaken}</p>}
         </div>
 
-        <div className="mb-8 rounded-lg border border-[#E7E5E4] bg-white px-5 py-4">
-          <p className="text-sm text-[#78716C]">
-            Your AI transformation report is being generated...
-          </p>
-          <div className="mt-3 flex items-center justify-center gap-1.5">
-            <div className="h-1.5 w-1.5 animate-pulse rounded-full bg-[#0D9488]" />
-            <div className="h-1.5 w-1.5 animate-pulse rounded-full bg-[#0D9488] [animation-delay:150ms]" />
-            <div className="h-1.5 w-1.5 animate-pulse rounded-full bg-[#0D9488] [animation-delay:300ms]" />
-          </div>
-        </div>
+        {renderReportSection()}
 
         <div className="flex flex-col items-center gap-3">
           <Button
             onClick={() => router.push('/dashboard')}
-            className="h-10 rounded-full bg-[#1C1917] px-6 text-sm font-medium text-white hover:bg-[#1C1917]/90"
+            className={`h-10 rounded-full px-6 text-sm font-medium ${
+              reportStatus === 'COMPLETED'
+                ? 'border border-[#E7E5E4] bg-white text-[#1C1917] hover:bg-[#FAFAF9]'
+                : 'bg-[#1C1917] text-white hover:bg-[#1C1917]/90'
+            }`}
           >
             Back to Dashboard
           </Button>
@@ -306,11 +401,10 @@ function QuestionFlow({
 
     try {
       setShowCheck(true);
-      // Brief pause for checkmark animation
-      await new Promise((resolve) => setTimeout(resolve, 400));
       setDirection(1);
+      // Fire API call — no artificial delay
       await submitAnswer.mutateAsync({
-        questionId: question.id,
+        questionId: question.questionId,
         value: answer!,
       });
     } catch {
@@ -323,7 +417,7 @@ function QuestionFlow({
       setDirection(1);
       // Submit with a skip value — the backend recognizes empty/skip
       await submitAnswer.mutateAsync({
-        questionId: question.id,
+        questionId: question.questionId,
         value: '',
       });
     } catch {
@@ -347,81 +441,84 @@ function QuestionFlow({
   };
 
   return (
-    <div>
-      <ProgressHeader
-        answered={progress.answered}
-        total={progress.total}
-        section={question.section}
-      />
+    <div className="flex w-full flex-col items-center">
+      <div className="w-full max-w-[540px]">
+        <ProgressHeader
+          answered={progress.answered}
+          total={progress.total}
+          section={question.section}
+        />
 
-      <AnimatePresence mode="wait" custom={direction}>
-        <motion.div
-          key={question.id}
-          custom={direction}
-          variants={slideVariants}
-          initial="enter"
-          animate="center"
-          exit="exit"
-          transition={{ duration: 0.3, ease: 'easeOut' }}
-        >
-          {/* Question text */}
-          <h2 className="mb-8 text-xl font-medium leading-relaxed text-[#1C1917]">
-            {question.question.questionText}
-          </h2>
+        <AnimatePresence mode="wait" custom={direction}>
+          <motion.div
+            key={question.id}
+            custom={direction}
+            variants={slideVariants}
+            initial="enter"
+            animate="center"
+            exit="exit"
+            transition={{ duration: 0.2, ease: 'easeOut' }}
+            className="text-center"
+          >
+            {/* Question text */}
+            <h2 className="mb-10 text-2xl font-medium leading-relaxed text-[#1C1917]">
+              {question.question.questionText}
+            </h2>
 
-          {/* Question input */}
-          <div className="mb-8">
-            <QuestionRenderer
-              question={question}
-              value={answer}
-              onChange={setAnswer}
-            />
-          </div>
+            {/* Question input */}
+            <div className="mb-10 text-left">
+              <QuestionRenderer
+                question={question}
+                value={answer}
+                onChange={setAnswer}
+              />
+            </div>
 
-          {/* Submit / Skip */}
-          <div className="flex flex-col items-center gap-3">
-            {/* Submit button with checkmark state */}
-            <Button
-              onClick={handleSubmit}
-              disabled={isAnswerEmpty || submitAnswer.isPending}
-              className="h-11 min-w-[180px] rounded-full bg-[#1C1917] px-8 text-sm font-medium text-white transition-all hover:bg-[#1C1917]/90 disabled:bg-[#E7E5E4] disabled:text-[#A8A29E]"
-            >
-              {showCheck ? (
-                <motion.span
-                  initial={{ scale: 0 }}
-                  animate={{ scale: 1 }}
-                  className="flex items-center gap-2"
-                >
-                  <Check className="h-4 w-4" />
-                  Submitted
-                </motion.span>
-              ) : submitAnswer.isPending ? (
-                <span className="flex items-center gap-2">
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  Submitting...
-                </span>
-              ) : (
-                <span className="flex items-center gap-2">
-                  Submit Answer
-                  <ArrowRight className="h-4 w-4" />
-                </span>
-              )}
-            </Button>
-
-            {/* Skip button */}
-            {!question.question.isRequired && (
-              <button
-                type="button"
-                onClick={handleSkip}
-                disabled={submitAnswer.isPending}
-                className="text-sm font-medium text-[#A8A29E] transition-colors hover:text-[#78716C] disabled:opacity-50"
+            {/* Submit / Skip */}
+            <div className="flex flex-col items-center gap-3">
+              {/* Submit button with checkmark state */}
+              <Button
+                onClick={handleSubmit}
+                disabled={isAnswerEmpty || submitAnswer.isPending}
+                className="h-11 min-w-[180px] rounded-full bg-[#1C1917] px-8 text-sm font-medium text-white transition-all hover:bg-[#1C1917]/90 disabled:bg-[#E7E5E4] disabled:text-[#A8A29E]"
               >
-                Skip this question
-              </button>
-            )}
-          </div>
-        </motion.div>
-      </AnimatePresence>
+                {showCheck ? (
+                  <motion.span
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    className="flex items-center gap-2"
+                  >
+                    <Check className="h-4 w-4" />
+                    Submitted
+                  </motion.span>
+                ) : submitAnswer.isPending ? (
+                  <span className="flex items-center gap-2">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Submitting...
+                  </span>
+                ) : (
+                  <span className="flex items-center gap-2">
+                    Submit Answer
+                    <ArrowRight className="h-4 w-4" />
+                  </span>
+                )}
+              </Button>
+
+              {/* Skip button */}
+              {!question.question.isRequired && (
+                <button
+                  type="button"
+                  onClick={handleSkip}
+                  disabled={submitAnswer.isPending}
+                  className="text-sm font-medium text-[#A8A29E] transition-colors hover:text-[#78716C] disabled:opacity-50"
+                >
+                  Skip this question
+                </button>
+              )}
+            </div>
+          </motion.div>
+        </AnimatePresence>
+      </div>
     </div>
   );
 }
@@ -485,7 +582,7 @@ export default function ConsultationPage() {
     return (
       <CompletedScreen
         sessionId={sessionId}
-        totalQuestions={currentQuestion?.progress.total ?? session._count?.questions ?? 0}
+        totalQuestions={currentQuestion?.progress?.total ?? session._count?.questions ?? 0}
         startedAt={session.startedAt}
         completedAt={session.completedAt}
       />

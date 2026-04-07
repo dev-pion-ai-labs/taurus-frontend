@@ -30,8 +30,13 @@ export function ProtectedRoute({
       return;
     }
 
-    if (user && !user.organizationId && requireOrg) {
+    if (user && (!user.firstName || !user.lastName) && requireOrg) {
       router.replace('/onboarding');
+      return;
+    }
+
+    if (user && !user.onboardingCompleted && requireOrg) {
+      router.replace('/questionnaire');
       return;
     }
   }, [accessToken, hydrated, user, isLoading, isError, requireOrg, router]);
