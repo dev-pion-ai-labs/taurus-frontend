@@ -73,10 +73,48 @@ export function useSubmitAnswer(sessionId: string) {
           body: JSON.stringify(data),
         }
       ),
-    onSuccess: () => {
-      queryClient.invalidateQueries({
-        queryKey: ['session', sessionId, 'current-question'],
-      });
+    onSuccess: (data) => {
+      // If backend returns the next question, update cache instantly
+      if (data.nextQuestion) {
+        queryClient.setQueryData(
+          ['session', sessionId, 'current-question'],
+          (old: CurrentQuestionResponse | undefined) => {
+            if (!old) return old;
+            return {
+              ...old,
+              status: data.status,
+              question: data.nextQuestion,
+              progress: {
+                ...old.progress,
+                answered: old.progress.answered + 1,
+              },
+            };
+          }
+        );
+      } else if (data.status === 'COMPLETED') {
+        // Session completed — update status immediately, no refetch needed
+        queryClient.setQueryData(
+          ['session', sessionId, 'current-question'],
+          (old: CurrentQuestionResponse | undefined) => {
+            if (!old) return old;
+            return {
+              ...old,
+              status: 'COMPLETED',
+              question: null,
+              progress: {
+                ...old.progress,
+                answered: old.progress.total,
+              },
+            };
+          }
+        );
+      } else {
+        // Fallback — refetch if backend didn't return nextQuestion
+        queryClient.invalidateQueries({
+          queryKey: ['session', sessionId, 'current-question'],
+        });
+      }
+      // Background-refresh session data (non-blocking)
       queryClient.invalidateQueries({
         queryKey: ['session', sessionId],
       });

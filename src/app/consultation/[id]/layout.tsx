@@ -87,8 +87,8 @@ export default function ConsultationLayout({
           </div>
         </header>
 
-        {/* Centered content area */}
-        <main className="mx-auto max-w-[640px] px-6 py-8">
+        {/* Centered content area — fills remaining viewport height */}
+        <main className="mx-auto flex min-h-[calc(100vh-3.5rem)] max-w-[640px] flex-col justify-center px-6 py-8">
           {children}
         </main>
       </div>

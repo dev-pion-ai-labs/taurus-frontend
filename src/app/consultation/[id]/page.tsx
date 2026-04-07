@@ -401,11 +401,10 @@ function QuestionFlow({
 
     try {
       setShowCheck(true);
-      // Brief pause for checkmark animation
-      await new Promise((resolve) => setTimeout(resolve, 400));
       setDirection(1);
+      // Fire API call — no artificial delay
       await submitAnswer.mutateAsync({
-        questionId: question.id,
+        questionId: question.questionId,
         value: answer!,
       });
     } catch {
@@ -418,7 +417,7 @@ function QuestionFlow({
       setDirection(1);
       // Submit with a skip value — the backend recognizes empty/skip
       await submitAnswer.mutateAsync({
-        questionId: question.id,
+        questionId: question.questionId,
         value: '',
       });
     } catch {
@@ -442,81 +441,84 @@ function QuestionFlow({
   };
 
   return (
-    <div>
-      <ProgressHeader
-        answered={progress.answered}
-        total={progress.total}
-        section={question.section}
-      />
+    <div className="flex w-full flex-col items-center">
+      <div className="w-full max-w-[540px]">
+        <ProgressHeader
+          answered={progress.answered}
+          total={progress.total}
+          section={question.section}
+        />
 
-      <AnimatePresence mode="wait" custom={direction}>
-        <motion.div
-          key={question.id}
-          custom={direction}
-          variants={slideVariants}
-          initial="enter"
-          animate="center"
-          exit="exit"
-          transition={{ duration: 0.3, ease: 'easeOut' }}
-        >
-          {/* Question text */}
-          <h2 className="mb-8 text-xl font-medium leading-relaxed text-[#1C1917]">
-            {question.question.questionText}
-          </h2>
+        <AnimatePresence mode="wait" custom={direction}>
+          <motion.div
+            key={question.id}
+            custom={direction}
+            variants={slideVariants}
+            initial="enter"
+            animate="center"
+            exit="exit"
+            transition={{ duration: 0.2, ease: 'easeOut' }}
+            className="text-center"
+          >
+            {/* Question text */}
+            <h2 className="mb-10 text-2xl font-medium leading-relaxed text-[#1C1917]">
+              {question.question.questionText}
+            </h2>
 
-          {/* Question input */}
-          <div className="mb-8">
-            <QuestionRenderer
-              question={question}
-              value={answer}
-              onChange={setAnswer}
-            />
-          </div>
+            {/* Question input */}
+            <div className="mb-10 text-left">
+              <QuestionRenderer
+                question={question}
+                value={answer}
+                onChange={setAnswer}
+              />
+            </div>
 
-          {/* Submit / Skip */}
-          <div className="flex flex-col items-center gap-3">
-            {/* Submit button with checkmark state */}
-            <Button
-              onClick={handleSubmit}
-              disabled={isAnswerEmpty || submitAnswer.isPending}
-              className="h-11 min-w-[180px] rounded-full bg-[#1C1917] px-8 text-sm font-medium text-white transition-all hover:bg-[#1C1917]/90 disabled:bg-[#E7E5E4] disabled:text-[#A8A29E]"
-            >
-              {showCheck ? (
-                <motion.span
-                  initial={{ scale: 0 }}
-                  animate={{ scale: 1 }}
-                  className="flex items-center gap-2"
-                >
-                  <Check className="h-4 w-4" />
-                  Submitted
-                </motion.span>
-              ) : submitAnswer.isPending ? (
-                <span className="flex items-center gap-2">
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  Submitting...
-                </span>
-              ) : (
-                <span className="flex items-center gap-2">
-                  Submit Answer
-                  <ArrowRight className="h-4 w-4" />
-                </span>
-              )}
-            </Button>
-
-            {/* Skip button */}
-            {!question.question.isRequired && (
-              <button
-                type="button"
-                onClick={handleSkip}
-                disabled={submitAnswer.isPending}
-                className="text-sm font-medium text-[#A8A29E] transition-colors hover:text-[#78716C] disabled:opacity-50"
+            {/* Submit / Skip */}
+            <div className="flex flex-col items-center gap-3">
+              {/* Submit button with checkmark state */}
+              <Button
+                onClick={handleSubmit}
+                disabled={isAnswerEmpty || submitAnswer.isPending}
+                className="h-11 min-w-[180px] rounded-full bg-[#1C1917] px-8 text-sm font-medium text-white transition-all hover:bg-[#1C1917]/90 disabled:bg-[#E7E5E4] disabled:text-[#A8A29E]"
               >
-                Skip this question
-              </button>
-            )}
-          </div>
-        </motion.div>
-      </AnimatePresence>
+                {showCheck ? (
+                  <motion.span
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    className="flex items-center gap-2"
+                  >
+                    <Check className="h-4 w-4" />
+                    Submitted
+                  </motion.span>
+                ) : submitAnswer.isPending ? (
+                  <span className="flex items-center gap-2">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Submitting...
+                  </span>
+                ) : (
+                  <span className="flex items-center gap-2">
+                    Submit Answer
+                    <ArrowRight className="h-4 w-4" />
+                  </span>
+                )}
+              </Button>
+
+              {/* Skip button */}
+              {!question.question.isRequired && (
+                <button
+                  type="button"
+                  onClick={handleSkip}
+                  disabled={submitAnswer.isPending}
+                  className="text-sm font-medium text-[#A8A29E] transition-colors hover:text-[#78716C] disabled:opacity-50"
+                >
+                  Skip this question
+                </button>
+              )}
+            </div>
+          </motion.div>
+        </AnimatePresence>
+      </div>
     </div>
   );
 }
@@ -580,7 +582,7 @@ export default function ConsultationPage() {
     return (
       <CompletedScreen
         sessionId={sessionId}
-        totalQuestions={currentQuestion?.progress.total ?? session._count?.questions ?? 0}
+        totalQuestions={currentQuestion?.progress?.total ?? session._count?.questions ?? 0}
         startedAt={session.startedAt}
         completedAt={session.completedAt}
       />
