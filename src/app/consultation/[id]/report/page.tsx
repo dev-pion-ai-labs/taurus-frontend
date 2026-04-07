@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef } from 'react';
 import Link from 'next/link';
 import { motion, AnimatePresence, type Variants } from 'framer-motion';
 import {
@@ -22,6 +22,7 @@ import {
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { useReport, useRegenerateReport } from '@/hooks/use-report';
+import { useExecutiveDashboard } from '@/hooks/use-executive-dashboard';
 import { useCountUp } from '@/hooks/use-count-up';
 import {
   formatDollar,
@@ -29,6 +30,14 @@ import {
   getMaturityColor,
 } from '@/lib/format';
 import { useAuthStore } from '@/stores/auth-store';
+import {
+  ValueOverviewSection,
+  DepartmentAnalyticsSection,
+  RecommendationAnalyticsSection,
+  ImplementationAnalyticsSection,
+} from '@/components/report/report-charts';
+import { PdfExportButton } from '@/components/report/pdf-export';
+import { ReportComparisonSection } from '@/components/report/report-comparison';
 import type {
   TransformationReport,
   DepartmentScore,
@@ -996,17 +1005,21 @@ function LoadingSkeleton() {
 /* ------------------------------------------------------------------ */
 
 function CompletedReport({ report }: { report: TransformationReport }) {
+  const reportRef = useRef<HTMLDivElement>(null);
+  const { data: dashboard } = useExecutiveDashboard();
+
   return (
     <div
       className="relative w-[100vw] pb-16"
       style={{ left: '50%', right: '50%', marginLeft: '-50vw', marginRight: '-50vw' }}
     >
-      <div className="mx-auto max-w-4xl space-y-12 px-6">
-          {/* Back link */}
+      <div ref={reportRef} className="mx-auto max-w-4xl space-y-12 px-6">
+          {/* Back link + Export button */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.1 }}
+            className="flex items-center justify-between"
           >
             <Link
               href="/dashboard"
@@ -1015,6 +1028,7 @@ function CompletedReport({ report }: { report: TransformationReport }) {
               <ArrowLeft className="h-3.5 w-3.5" />
               Back to Dashboard
             </Link>
+            <PdfExportButton reportRef={reportRef} report={report} />
           </motion.div>
 
           {/* Page title */}
@@ -1042,25 +1056,46 @@ function CompletedReport({ report }: { report: TransformationReport }) {
           {/* 1. Hero: Score + KPIs */}
           <HeroSection report={report} />
 
-          {/* 2. Executive Summary */}
+          {/* 2. Value Overview Charts */}
+          <ValueOverviewSection report={report} />
+
+          {/* 3. Executive Summary */}
           {report.executiveSummary && (
             <ExecutiveSummarySection executiveSummary={report.executiveSummary} />
           )}
 
-          {/* 3. Department Scores */}
+          {/* 4. Department Scores */}
           {report.departmentScores && report.departmentScores.length > 0 && (
             <DepartmentScoresSection departments={report.departmentScores} />
           )}
 
-          {/* 4. Recommendations */}
+          {/* 5. Department Analytics Charts */}
+          {report.departmentScores && report.departmentScores.length > 0 && (
+            <DepartmentAnalyticsSection departments={report.departmentScores} />
+          )}
+
+          {/* 6. Recommendations */}
           {report.recommendations && report.recommendations.length > 0 && (
             <RecommendationsSection recommendations={report.recommendations} />
           )}
 
-          {/* 5. Implementation Roadmap */}
+          {/* 7. Recommendation Analytics Charts */}
+          {report.recommendations && report.recommendations.length > 0 && (
+            <RecommendationAnalyticsSection recommendations={report.recommendations} />
+          )}
+
+          {/* 8. Implementation Roadmap */}
           {report.implementationPlan && report.implementationPlan.length > 0 && (
             <ImplementationRoadmapSection phases={report.implementationPlan} />
           )}
+
+          {/* 9. Implementation Analytics Chart */}
+          {report.implementationPlan && report.implementationPlan.length > 0 && (
+            <ImplementationAnalyticsSection phases={report.implementationPlan} />
+          )}
+
+          {/* 10. Historical Comparison */}
+          <ReportComparisonSection dashboard={dashboard} />
 
           {/* Footer CTA */}
           <motion.div
