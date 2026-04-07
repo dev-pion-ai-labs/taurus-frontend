@@ -6,6 +6,7 @@ import type { OnboardingData, UploadedDocument } from '@/types';
 
 const INITIAL_FORM_DATA: OnboardingData = {
   companyName: '',
+  companyUrl: '',
   industryId: '',
   customIndustry: '',
   companySize: '',

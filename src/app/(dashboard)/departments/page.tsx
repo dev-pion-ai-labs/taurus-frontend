@@ -303,7 +303,7 @@ function AddWorkflowForm({ departmentId }: { departmentId: string }) {
       <button
         type="button"
         onClick={() => setIsOpen(true)}
-        className="flex items-center gap-1.5 text-[13px] font-medium text-[#78716C] transition-colors hover:text-[#E11D48]"
+        className="flex w-full items-center justify-center gap-2 rounded-lg border border-dashed border-[#D6D3D1] bg-[#FAFAF9]/50 py-3 text-[13px] font-medium text-[#78716C] transition-all hover:border-[#E11D48]/30 hover:bg-[#FFF1F2]/30 hover:text-[#E11D48]"
       >
         <Plus className="h-3.5 w-3.5" />
         Add workflow
@@ -312,32 +312,57 @@ function AddWorkflowForm({ departmentId }: { departmentId: string }) {
   }
 
   return (
-    <div className="mt-3 rounded-lg border border-[#E7E5E4] bg-[#FAFAF9] p-4">
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-3">
-        <div className="grid gap-3 sm:grid-cols-2">
-          <div className="space-y-1">
-            <Label className="text-xs text-[#1C1917]">Workflow name *</Label>
-            <Input {...register('name')} placeholder="e.g. Lead qualification" className="h-8 text-sm" />
+    <div className="mt-3 overflow-hidden rounded-xl border border-[#E7E5E4] bg-white shadow-sm">
+      {/* Form header */}
+      <div className="flex items-center gap-2.5 border-b border-[#F5F5F4] bg-gradient-to-r from-[#FFF1F2] to-[#FAFAF9] px-5 py-3">
+        <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#E11D48]/10">
+          <Zap className="h-3.5 w-3.5 text-[#E11D48]" />
+        </div>
+        <h4 className="text-[14px] font-semibold text-[#1C1917]">New Workflow</h4>
+      </div>
+
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-5 p-5">
+        {/* Workflow identity */}
+        <div className="space-y-3">
+          <div className="space-y-1.5">
+            <Label className="text-[13px] font-medium text-[#1C1917]">Workflow name <span className="text-[#E11D48]">*</span></Label>
+            <Input {...register('name')} placeholder="e.g. Lead qualification, Invoice processing" className="h-10 rounded-lg border-[#E7E5E4] bg-[#FAFAF9] text-sm transition-colors focus:bg-white" />
             {errors.name && <p className="text-xs text-red-500">{errors.name.message}</p>}
           </div>
-          <div className="space-y-1">
-            <Label className="text-xs text-[#1C1917]">Description</Label>
-            <Input {...register('description')} placeholder="Brief description" className="h-8 text-sm" />
+          <div className="space-y-1.5">
+            <Label className="text-[13px] font-medium text-[#1C1917]">Description</Label>
+            <textarea
+              {...register('description')}
+              rows={2}
+              placeholder="Briefly describe what this workflow involves..."
+              className="w-full rounded-lg border border-[#E7E5E4] bg-[#FAFAF9] px-3 py-2.5 text-sm text-[#1C1917] outline-none transition-colors placeholder:text-[#A8A29E] focus:border-[#1C1917] focus:bg-white focus:ring-2 focus:ring-[#1C1917]/10"
+            />
           </div>
         </div>
-        <div className="grid gap-3 sm:grid-cols-4">
-          <div className="space-y-1">
-            <Label className="text-xs text-[#1C1917]">Hours/week</Label>
-            <Input {...register('weeklyHours')} type="number" placeholder="20" className="h-8 text-sm" />
+
+        {/* Metrics row */}
+        <div className="grid gap-4 sm:grid-cols-4">
+          <div className="space-y-1.5">
+            <Label className="flex items-center gap-1.5 text-[13px] font-medium text-[#1C1917]">
+              <Clock className="h-3.5 w-3.5 text-[#A8A29E]" />
+              Hours/week
+            </Label>
+            <Input {...register('weeklyHours')} type="number" placeholder="20" className="h-10 rounded-lg border-[#E7E5E4] bg-[#FAFAF9] text-sm transition-colors focus:bg-white" />
           </div>
-          <div className="space-y-1">
-            <Label className="text-xs text-[#1C1917]">People</Label>
-            <Input {...register('peopleInvolved')} type="number" placeholder="4" className="h-8 text-sm" />
+          <div className="space-y-1.5">
+            <Label className="flex items-center gap-1.5 text-[13px] font-medium text-[#1C1917]">
+              <Users className="h-3.5 w-3.5 text-[#A8A29E]" />
+              People involved
+            </Label>
+            <Input {...register('peopleInvolved')} type="number" placeholder="4" className="h-10 rounded-lg border-[#E7E5E4] bg-[#FAFAF9] text-sm transition-colors focus:bg-white" />
           </div>
-          <div className="space-y-1">
-            <Label className="text-xs text-[#1C1917]">Automation</Label>
+          <div className="space-y-1.5">
+            <Label className="flex items-center gap-1.5 text-[13px] font-medium text-[#1C1917]">
+              <Zap className="h-3.5 w-3.5 text-[#A8A29E]" />
+              Automation
+            </Label>
             <Select value={watch('automationLevel') ?? 'NONE'} onValueChange={(v) => setValue('automationLevel', v ?? undefined)}>
-              <SelectTrigger className="h-8 text-sm"><SelectValue /></SelectTrigger>
+              <SelectTrigger className="h-10 rounded-lg border-[#E7E5E4] bg-[#FAFAF9] text-sm"><SelectValue /></SelectTrigger>
               <SelectContent>
                 {Object.entries(AUTOMATION_LABELS).map(([k, v]) => (
                   <SelectItem key={k} value={k}>{v}</SelectItem>
@@ -345,10 +370,13 @@ function AddWorkflowForm({ departmentId }: { departmentId: string }) {
               </SelectContent>
             </Select>
           </div>
-          <div className="space-y-1">
-            <Label className="text-xs text-[#1C1917]">Priority</Label>
+          <div className="space-y-1.5">
+            <Label className="flex items-center gap-1.5 text-[13px] font-medium text-[#1C1917]">
+              <AlertCircle className="h-3.5 w-3.5 text-[#A8A29E]" />
+              Priority
+            </Label>
             <Select value={watch('priority') ?? 'MEDIUM'} onValueChange={(v) => setValue('priority', v ?? undefined)}>
-              <SelectTrigger className="h-8 text-sm"><SelectValue /></SelectTrigger>
+              <SelectTrigger className="h-10 rounded-lg border-[#E7E5E4] bg-[#FAFAF9] text-sm"><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="LOW">Low</SelectItem>
                 <SelectItem value="MEDIUM">Medium</SelectItem>
@@ -358,18 +386,31 @@ function AddWorkflowForm({ departmentId }: { departmentId: string }) {
             </Select>
           </div>
         </div>
-        <div className="space-y-1">
-          <Label className="text-xs text-[#1C1917]">Pain points</Label>
-          <Input {...register('painPoints')} placeholder="What's slow, broken, or frustrating?" className="h-8 text-sm" />
+
+        {/* Pain points */}
+        <div className="space-y-1.5">
+          <Label className="text-[13px] font-medium text-[#1C1917]">Pain points</Label>
+          <textarea
+            {...register('painPoints')}
+            rows={2}
+            placeholder="What's slow, broken, or frustrating about this workflow?"
+            className="w-full rounded-lg border border-[#E7E5E4] bg-[#FAFAF9] px-3 py-2.5 text-sm text-[#1C1917] outline-none transition-colors placeholder:text-[#A8A29E] focus:border-[#1C1917] focus:bg-white focus:ring-2 focus:ring-[#1C1917]/10"
+          />
         </div>
-        <div className="flex items-center gap-2">
-          <Button type="submit" size="sm" disabled={createWorkflow.isPending} className="rounded-full bg-[#1C1917] text-white hover:bg-[#1C1917]/90">
-            {createWorkflow.isPending && <Loader2 className="mr-1.5 h-3 w-3 animate-spin" />}
+
+        {/* Actions */}
+        <div className="flex items-center gap-3 border-t border-[#F5F5F4] pt-4">
+          <Button type="submit" size="sm" disabled={createWorkflow.isPending} className="rounded-lg bg-[#1C1917] px-5 text-white hover:bg-[#1C1917]/90">
+            {createWorkflow.isPending && <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />}
             Add Workflow
           </Button>
-          <Button type="button" size="sm" variant="ghost" onClick={() => { reset(); setIsOpen(false); }}>
+          <button
+            type="button"
+            onClick={() => { reset(); setIsOpen(false); }}
+            className="text-[13px] font-medium text-[#78716C] transition-colors hover:text-[#1C1917]"
+          >
             Cancel
-          </Button>
+          </button>
         </div>
       </form>
     </div>

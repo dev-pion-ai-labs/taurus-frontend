@@ -122,6 +122,7 @@ export interface ApiError {
 // Onboarding Questionnaire
 export interface OnboardingData {
   companyName: string;
+  companyUrl: string;
   industryId: string;
   customIndustry: string;
   companySize: string;
@@ -161,6 +162,7 @@ export interface OnboardingSubmitResponse {
 // Onboarding Profile (display-ready)
 export interface OnboardingProfile {
   companyName: string | null;
+  companyUrl: string | null;
   industry: { id: string; name: string } | null;
   customIndustry: string | null;
   companySize: string | null;

@@ -5,7 +5,7 @@ import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { toast } from 'sonner';
-import { Loader2, ArrowRight, Building2, Users } from 'lucide-react';
+import { Loader2, ArrowRight, Building2, Globe, Users } from 'lucide-react';
 import { IndustryCombobox } from '@/components/onboarding/industry-combobox';
 import { COMPANY_SIZES } from '@/lib/constants';
 import { useOnboardingStore } from '@/stores/onboarding-store';
@@ -14,6 +14,7 @@ import { useAuthStore } from '@/stores/auth-store';
 
 const schema = z.object({
   companyName: z.string().min(1, 'Company name is required'),
+  companyUrl: z.string().url('Please enter a valid URL').optional().or(z.literal('')),
   industryId: z.string().min(1, 'Please select an industry'),
   customIndustry: z.string().optional(),
   companySize: z.string().optional(),
@@ -51,6 +52,7 @@ export function StepBasicInfo({ onNext, isSaving }: StepBasicInfoProps) {
     resolver: zodResolver(schema),
     defaultValues: {
       companyName: formData.companyName,
+      companyUrl: formData.companyUrl,
       industryId: formData.industryId,
       customIndustry: formData.customIndustry,
       companySize: formData.companySize,
@@ -63,6 +65,7 @@ export function StepBasicInfo({ onNext, isSaving }: StepBasicInfoProps) {
   const onSubmit = async (data: FormData) => {
     updateFormData({
       companyName: data.companyName,
+      companyUrl: data.companyUrl || '',
       industryId: data.industryId,
       customIndustry: data.customIndustry || '',
       companySize: data.companySize || '',
@@ -127,6 +130,30 @@ export function StepBasicInfo({ onNext, isSaving }: StepBasicInfoProps) {
         </div>
         {errors.companyName && (
           <p className="text-xs text-[#EF4444]">{errors.companyName.message}</p>
+        )}
+      </div>
+
+      {/* Company URL */}
+      <div className="space-y-2">
+        <label
+          htmlFor="companyUrl"
+          className="block text-sm font-semibold text-[#1C1917]"
+        >
+          Company Website
+        </label>
+        <div className="relative">
+          <Globe className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[#A8A29E]" />
+          <input
+            {...register('companyUrl')}
+            id="companyUrl"
+            type="url"
+            placeholder="https://example.com"
+            disabled={isSubmitting}
+            className="h-12 w-full rounded-xl border border-[#E7E5E4] bg-[#FAFAF9] pl-10 pr-4 text-sm text-[#1C1917] outline-none transition-all placeholder:text-[#A8A29E] focus:border-[#1C1917] focus:bg-white focus:ring-2 focus:ring-[#1C1917]/10 disabled:cursor-not-allowed disabled:opacity-50"
+          />
+        </div>
+        {errors.companyUrl && (
+          <p className="text-xs text-[#EF4444]">{errors.companyUrl.message}</p>
         )}
       </div>
 
