@@ -77,12 +77,13 @@ export interface ConsultationSession {
 export interface SessionQuestion {
   id: string;
   sessionId: string;
-  questionId: string;
-  section: 'BASE' | 'INDUSTRY' | 'CHALLENGE_BONUS';
+  questionId: string | null;
+  section: 'BASE' | 'INDUSTRY' | 'CHALLENGE_BONUS' | 'PERSONALIZED' | 'ADAPTIVE';
   orderIndex: number;
   answer: { value: string | string[] | number } | null;
   answeredAt: string | null;
   skipped: boolean;
+  isAdaptive?: boolean;
   question: TemplateQuestion;
 }
 
@@ -95,6 +96,7 @@ export interface CurrentQuestionResponse {
 export interface SubmitAnswerResponse {
   status: 'IN_PROGRESS' | 'COMPLETED';
   nextQuestion: SessionQuestion | null;
+  progress?: { answered: number; total: number };
 }
 
 // Pagination

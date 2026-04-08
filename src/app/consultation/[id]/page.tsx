@@ -404,7 +404,7 @@ function QuestionFlow({
       setDirection(1);
       // Fire API call — no artificial delay
       await submitAnswer.mutateAsync({
-        questionId: question.questionId,
+        questionId: question.id,
         value: answer!,
       });
     } catch {
@@ -417,7 +417,7 @@ function QuestionFlow({
       setDirection(1);
       // Submit with a skip value — the backend recognizes empty/skip
       await submitAnswer.mutateAsync({
-        questionId: question.questionId,
+        questionId: question.id,
         value: '',
       });
     } catch {

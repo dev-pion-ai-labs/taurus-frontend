@@ -1,13 +1,15 @@
 'use client';
 
 interface SectionIndicatorProps {
-  section: 'BASE' | 'INDUSTRY' | 'CHALLENGE_BONUS';
+  section: 'BASE' | 'INDUSTRY' | 'CHALLENGE_BONUS' | 'PERSONALIZED' | 'ADAPTIVE';
 }
 
 const sectionLabels: Record<string, string> = {
-  BASE: 'BASE QUESTIONS',
+  BASE: 'CORE QUESTIONS',
   INDUSTRY: 'INDUSTRY QUESTIONS',
   CHALLENGE_BONUS: 'CHALLENGE BONUS',
+  PERSONALIZED: 'TAILORED TO YOU',
+  ADAPTIVE: 'FOLLOW-UP',
 };
 
 export function SectionIndicator({ section }: SectionIndicatorProps) {

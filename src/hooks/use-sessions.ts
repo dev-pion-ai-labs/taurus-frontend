@@ -39,6 +39,8 @@ export function useCurrentQuestion(id: string, enabled = true) {
     refetchInterval: (query) => {
       const data = query.state.data;
       if (data?.status === 'PENDING_TEMPLATE') return 5000;
+      // Periodically refresh to pick up adaptive questions added by background jobs
+      if (data?.status === 'IN_PROGRESS') return 10000;
       return false;
     },
   });
@@ -84,7 +86,7 @@ export function useSubmitAnswer(sessionId: string) {
               ...old,
               status: data.status,
               question: data.nextQuestion,
-              progress: {
+              progress: data.progress ?? {
                 ...old.progress,
                 answered: old.progress.answered + 1,
               },

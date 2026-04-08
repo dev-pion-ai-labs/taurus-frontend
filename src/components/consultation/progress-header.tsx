@@ -6,7 +6,7 @@ import { SectionIndicator } from '@/components/consultation/section-indicator';
 interface ProgressHeaderProps {
   answered: number;
   total: number;
-  section: 'BASE' | 'INDUSTRY' | 'CHALLENGE_BONUS';
+  section: 'BASE' | 'INDUSTRY' | 'CHALLENGE_BONUS' | 'PERSONALIZED' | 'ADAPTIVE';
 }
 
 export function ProgressHeader({ answered, total, section }: ProgressHeaderProps) {
