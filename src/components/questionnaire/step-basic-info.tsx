@@ -97,6 +97,10 @@ export function StepBasicInfo({ onNext, isSaving }: StepBasicInfoProps) {
     // Kick off website scraping in background (fire-and-forget)
     if (data.companyUrl) {
       startScraping.mutate(data.companyUrl);
+      toast.success(
+        'We\'ll analyze your website in the background while you continue setup.',
+        { duration: 5000, icon: '🌐' },
+      );
     }
 
     onNext();
@@ -159,8 +163,12 @@ export function StepBasicInfo({ onNext, isSaving }: StepBasicInfoProps) {
             className="h-12 w-full rounded-xl border border-[#E7E5E4] bg-[#FAFAF9] pl-10 pr-4 text-sm text-[#1C1917] outline-none transition-all placeholder:text-[#A8A29E] focus:border-[#1C1917] focus:bg-white focus:ring-2 focus:ring-[#1C1917]/10 disabled:cursor-not-allowed disabled:opacity-50"
           />
         </div>
-        {errors.companyUrl && (
+        {errors.companyUrl ? (
           <p className="text-xs text-[#EF4444]">{errors.companyUrl.message}</p>
+        ) : (
+          <p className="text-xs text-[#A8A29E]">
+            We&apos;ll analyze your website in the background to personalize your experience.
+          </p>
         )}
       </div>
 
