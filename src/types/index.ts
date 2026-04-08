@@ -242,6 +242,68 @@ export interface OnboardingInsights {
   recommendedNextSteps: string[];
 }
 
+// ─── Website Scraping ──────────────────────────────────
+
+export type ScrapingStatus = 'NOT_STARTED' | 'QUEUED' | 'IN_PROGRESS' | 'COMPLETED' | 'FAILED';
+
+export interface ScrapedWebsiteData {
+  title?: string;
+  description?: string;
+  keywords?: string[];
+  headings?: string[];
+  mainContent?: string;
+  socialLinks?: string[];
+  contactInfo?: {
+    emails?: string[];
+    phones?: string[];
+    email?: string;
+    phone?: string;
+  };
+  metadata?: {
+    url?: string;
+    scrapedAt?: string;
+    language?: string;
+    ogTitle?: string;
+    ogDescription?: string;
+    ogImage?: string;
+    statusCode?: number;
+    contentType?: string;
+    pagesDiscovered?: number;
+    pagesScraped?: number;
+  };
+  businessData?: {
+    companyInfo?: {
+      name?: string;
+      mission?: string;
+      industry?: string;
+      companySize?: string;
+      founded?: string;
+      headquarters?: string;
+    };
+    products?: Array<{ name?: string; description?: string; category?: string }>;
+    services?: Array<{ name?: string; description?: string }>;
+    businessModel?: { type?: string; revenueStreams?: string[] };
+    challenges?: string[];
+    goals?: string[];
+    technologies?: string[];
+    aiDetected?: boolean;
+    aiMentions?: string[];
+    automationDetected?: boolean;
+    automationMentions?: string[];
+  };
+  links?: string[];
+  images?: string[];
+  branding?: any;
+  error?: string;
+}
+
+export interface ScrapingStatusResponse {
+  status: ScrapingStatus;
+  companyUrl: string | null;
+  scrapedContent: ScrapedWebsiteData | null;
+  scrapedAt: string | null;
+}
+
 // ─── Transformation Report ─────────────────────────────
 
 export type ReportStatus = 'GENERATING' | 'COMPLETED' | 'FAILED';
