@@ -77,12 +77,13 @@ export interface ConsultationSession {
 export interface SessionQuestion {
   id: string;
   sessionId: string;
-  questionId: string;
-  section: 'BASE' | 'INDUSTRY' | 'CHALLENGE_BONUS';
+  questionId: string | null;
+  section: 'BASE' | 'INDUSTRY' | 'CHALLENGE_BONUS' | 'PERSONALIZED' | 'ADAPTIVE';
   orderIndex: number;
   answer: { value: string | string[] | number } | null;
   answeredAt: string | null;
   skipped: boolean;
+  isAdaptive?: boolean;
   question: TemplateQuestion;
 }
 
@@ -95,6 +96,7 @@ export interface CurrentQuestionResponse {
 export interface SubmitAnswerResponse {
   status: 'IN_PROGRESS' | 'COMPLETED';
   nextQuestion: SessionQuestion | null;
+  progress?: { answered: number; total: number };
 }
 
 // Pagination
@@ -240,6 +242,68 @@ export interface OnboardingInsights {
   quickWins: string[];
   risks: string[];
   recommendedNextSteps: string[];
+}
+
+// ─── Website Scraping ──────────────────────────────────
+
+export type ScrapingStatus = 'NOT_STARTED' | 'QUEUED' | 'IN_PROGRESS' | 'COMPLETED' | 'FAILED';
+
+export interface ScrapedWebsiteData {
+  title?: string;
+  description?: string;
+  keywords?: string[];
+  headings?: string[];
+  mainContent?: string;
+  socialLinks?: string[];
+  contactInfo?: {
+    emails?: string[];
+    phones?: string[];
+    email?: string;
+    phone?: string;
+  };
+  metadata?: {
+    url?: string;
+    scrapedAt?: string;
+    language?: string;
+    ogTitle?: string;
+    ogDescription?: string;
+    ogImage?: string;
+    statusCode?: number;
+    contentType?: string;
+    pagesDiscovered?: number;
+    pagesScraped?: number;
+  };
+  businessData?: {
+    companyInfo?: {
+      name?: string;
+      mission?: string;
+      industry?: string;
+      companySize?: string;
+      founded?: string;
+      headquarters?: string;
+    };
+    products?: Array<{ name?: string; description?: string; category?: string }>;
+    services?: Array<{ name?: string; description?: string }>;
+    businessModel?: { type?: string; revenueStreams?: string[] };
+    challenges?: string[];
+    goals?: string[];
+    technologies?: string[];
+    aiDetected?: boolean;
+    aiMentions?: string[];
+    automationDetected?: boolean;
+    automationMentions?: string[];
+  };
+  links?: string[];
+  images?: string[];
+  branding?: any;
+  error?: string;
+}
+
+export interface ScrapingStatusResponse {
+  status: ScrapingStatus;
+  companyUrl: string | null;
+  scrapedContent: ScrapedWebsiteData | null;
+  scrapedAt: string | null;
 }
 
 // ─── Transformation Report ─────────────────────────────

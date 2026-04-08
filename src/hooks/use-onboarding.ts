@@ -9,6 +9,7 @@ import type {
   OnboardingSubmitResponse,
   OnboardingProfile,
   OnboardingInsights,
+  ScrapingStatusResponse,
   UploadedDocument,
 } from '@/types';
 
@@ -76,6 +77,39 @@ export function useOnboardingProfile() {
     queryFn: () => apiClient<OnboardingProfile>('/onboarding/profile'),
     enabled: !!accessToken,
     retry: false,
+  });
+}
+
+export function useStartScraping() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (companyUrl: string) =>
+      apiClient<{ status: string; message: string }>('/onboarding/scrape', {
+        method: 'POST',
+        body: JSON.stringify({ companyUrl }),
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ['onboarding', 'scraping-status'],
+      });
+    },
+  });
+}
+
+export function useScrapingStatus(enabled = false) {
+  const { accessToken } = useAuthStore();
+
+  return useQuery({
+    queryKey: ['onboarding', 'scraping-status'],
+    queryFn: () =>
+      apiClient<ScrapingStatusResponse>('/onboarding/scraping-status'),
+    enabled: !!accessToken && enabled,
+    refetchInterval: (query) => {
+      const status = query.state.data?.status;
+      if (status === 'QUEUED' || status === 'IN_PROGRESS') return 3500;
+      return false;
+    },
   });
 }
 

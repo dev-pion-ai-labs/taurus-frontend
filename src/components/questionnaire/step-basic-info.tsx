@@ -10,6 +10,7 @@ import { IndustryCombobox } from '@/components/onboarding/industry-combobox';
 import { COMPANY_SIZES } from '@/lib/constants';
 import { useOnboardingStore } from '@/stores/onboarding-store';
 import { useCreateOrg } from '@/hooks/use-organizations';
+import { useStartScraping } from '@/hooks/use-onboarding';
 import { useAuthStore } from '@/stores/auth-store';
 
 const schema = z.object({
@@ -40,6 +41,7 @@ export function StepBasicInfo({ onNext, isSaving }: StepBasicInfoProps) {
   const { formData, updateFormData } = useOnboardingStore();
   const user = useAuthStore((s) => s.user);
   const createOrg = useCreateOrg();
+  const startScraping = useStartScraping();
   const [isCreatingOrg, setIsCreatingOrg] = useState(false);
 
   const {
@@ -90,6 +92,11 @@ export function StepBasicInfo({ onNext, isSaving }: StepBasicInfoProps) {
         return;
       }
       setIsCreatingOrg(false);
+    }
+
+    // Kick off website scraping in background (fire-and-forget)
+    if (data.companyUrl) {
+      startScraping.mutate(data.companyUrl);
     }
 
     onNext();

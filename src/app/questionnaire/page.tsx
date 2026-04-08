@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Check, ArrowLeft, ArrowRight, Loader2, Sparkles } from 'lucide-react';
+import { Check, ArrowLeft, ArrowRight, Loader2, Sparkles, Globe } from 'lucide-react';
 import { useAuthStore } from '@/stores/auth-store';
 import { useOnboardingStore } from '@/stores/onboarding-store';
 import { useMe } from '@/hooks/use-user';
@@ -12,6 +12,7 @@ import {
   useOnboardingStatus,
   useSaveOnboardingProgress,
   useSubmitOnboarding,
+  useScrapingStatus,
 } from '@/hooks/use-onboarding';
 import { StepProgress, MobileProgress } from '@/components/questionnaire/step-progress';
 import { StepBasicInfo } from '@/components/questionnaire/step-basic-info';
@@ -64,12 +65,17 @@ export default function QuestionnairePage() {
 
   const [direction, setDirection] = useState(1);
   const [showSuccess, setShowSuccess] = useState(false);
+  const [submittedUrl, setSubmittedUrl] = useState<string | null>(null);
   const [initialized, setInitialized] = useState(false);
   // Tracks whether each step has been validated (for enabling the nav buttons)
   const [stepValid, setStepValid] = useState(false);
 
   const saveProgress = useSaveOnboardingProgress();
   const submitOnboarding = useSubmitOnboarding();
+  // Poll scraping as soon as a URL exists (starts at step 1), so we know the
+  // result by the time the user finishes the questionnaire.
+  // Use submittedUrl as fallback after reset() clears the store.
+  const scrapingStatus = useScrapingStatus(!!formData.companyUrl || !!submittedUrl);
 
   const totalSteps = QUESTIONNAIRE_STEPS.length;
 
@@ -169,19 +175,41 @@ export default function QuestionnairePage() {
 
   const handleFinalSubmit = useCallback((lastStepData?: Partial<OnboardingData>) => {
     const finalData = lastStepData ? { ...formData, ...lastStepData } : formData;
+    // Capture URL before reset clears the store
+    setSubmittedUrl(finalData.companyUrl || null);
     submitOnboarding.mutate(finalData, {
       onSuccess: () => {
         setShowSuccess(true);
         reset();
-        setTimeout(() => {
-          router.replace('/dashboard');
-        }, 2000);
+        // If no company URL, redirect immediately
+        if (!finalData.companyUrl) {
+          setTimeout(() => router.replace('/dashboard'), 2000);
+        }
+        // Otherwise, scraping polling will handle the redirect (see effect below)
       },
       onError: (error) => {
         toast.error(error.message || 'Failed to submit. Please try again.');
       },
     });
   }, [submitOnboarding, formData, reset, router]);
+
+  // Redirect to dashboard when scraping finishes (or after timeout)
+  useEffect(() => {
+    if (!showSuccess) return;
+
+    // If no company URL, already handled above
+    if (!submittedUrl) return;
+
+    const status = scrapingStatus.data?.status;
+    if (status === 'COMPLETED' || status === 'FAILED') {
+      setTimeout(() => router.replace('/dashboard'), 1500);
+      return;
+    }
+
+    // Timeout fallback — don't keep user waiting more than 2 minutes
+    const timeout = setTimeout(() => router.replace('/dashboard'), 120_000);
+    return () => clearTimeout(timeout);
+  }, [showSuccess, submittedUrl, scrapingStatus.data?.status, router]);
 
   // ---------------------------------------------------------------------------
   // Guard renders
@@ -207,13 +235,24 @@ export default function QuestionnairePage() {
   // ---------------------------------------------------------------------------
 
   if (showSuccess) {
+    const scrapeStatus = scrapingStatus.data?.status;
+    const scrapedData = scrapingStatus.data?.scrapedContent;
+    const hasUrl = !!submittedUrl;
+    const isScrapingActive =
+      hasUrl &&
+      scrapeStatus !== 'COMPLETED' &&
+      scrapeStatus !== 'FAILED';
+    const scrapingDone = hasUrl && scrapeStatus === 'COMPLETED';
+    const scrapingFailed = hasUrl && scrapeStatus === 'FAILED';
+    const pagesScraped = scrapedData?.metadata?.pagesScraped;
+
     return (
       <div className="flex min-h-screen items-center justify-center bg-[#F5F5F4] px-4">
         <motion.div
           initial={{ scale: 0.8, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
           transition={{ duration: 0.4, ease: 'easeOut' }}
-          className="flex flex-col items-center gap-5"
+          className="flex flex-col items-center gap-6 max-w-md"
         >
           <motion.div
             initial={{ scale: 0 }}
@@ -221,8 +260,13 @@ export default function QuestionnairePage() {
             transition={{ delay: 0.15, type: 'spring', stiffness: 300, damping: 20 }}
             className="flex h-20 w-20 items-center justify-center rounded-full bg-[#1C1917]"
           >
-            <Check className="h-10 w-10 text-white" strokeWidth={3} />
+            {isScrapingActive ? (
+              <Globe className="h-10 w-10 text-white animate-pulse" />
+            ) : (
+              <Check className="h-10 w-10 text-white" strokeWidth={3} />
+            )}
           </motion.div>
+
           <motion.div
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
@@ -230,12 +274,99 @@ export default function QuestionnairePage() {
             className="text-center"
           >
             <p className="text-2xl font-bold text-[#1C1917]">
-              You&apos;re all set!
+              {isScrapingActive
+                ? 'Finishing up...'
+                : 'You\u0027re all set!'}
             </p>
             <p className="mt-2 text-sm text-[#78716C]">
-              Preparing your personalized dashboard...
+              {isScrapingActive
+                ? scrapeStatus === 'QUEUED'
+                  ? 'Your website is queued for analysis...'
+                  : 'Scanning your website for business intelligence...'
+                : 'Preparing your personalized dashboard...'}
             </p>
           </motion.div>
+
+          {/* Scraping progress / result feedback */}
+          {hasUrl && (
+            <motion.div
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.5, duration: 0.3 }}
+              className="w-full rounded-xl border border-[#E7E5E4] bg-white p-5"
+            >
+              <div className="flex items-center gap-3 mb-3">
+                <Globe className="h-4 w-4 text-[#78716C] shrink-0" />
+                <span className="text-sm font-medium text-[#1C1917] truncate">
+                  {submittedUrl}
+                </span>
+              </div>
+
+              {isScrapingActive && (
+                <div>
+                  <div className="h-1.5 w-full rounded-full bg-[#E7E5E4] overflow-hidden">
+                    <motion.div
+                      className="h-full bg-[#1C1917] rounded-full"
+                      initial={{ width: '15%' }}
+                      animate={{
+                        width: scrapeStatus === 'IN_PROGRESS' ? '75%' : '35%',
+                      }}
+                      transition={{ duration: 3, ease: 'easeInOut' }}
+                    />
+                  </div>
+                  <p className="mt-2 text-xs text-[#A8A29E]">
+                    {scrapeStatus === 'IN_PROGRESS'
+                      ? 'Discovering pages and extracting data...'
+                      : 'Waiting to start...'}
+                  </p>
+                </div>
+              )}
+
+              {scrapingDone && (
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <Check className="h-4 w-4 text-emerald-600" />
+                    <span className="text-sm text-emerald-700 font-medium">
+                      Website analyzed successfully
+                    </span>
+                  </div>
+                  {pagesScraped && (
+                    <p className="text-xs text-[#78716C]">
+                      Scanned {pagesScraped} page{pagesScraped > 1 ? 's' : ''} for AI &amp; automation insights
+                    </p>
+                  )}
+                  {scrapedData?.businessData && (
+                    <div className="flex flex-wrap gap-1.5 mt-1">
+                      {scrapedData.businessData.aiDetected && (
+                        <span className="inline-flex items-center gap-1 rounded-full bg-violet-50 px-2.5 py-0.5 text-[11px] font-medium text-violet-700">
+                          <Sparkles className="h-3 w-3" />
+                          AI usage detected
+                        </span>
+                      )}
+                      {scrapedData.businessData.automationDetected && (
+                        <span className="inline-flex items-center rounded-full bg-blue-50 px-2.5 py-0.5 text-[11px] font-medium text-blue-700">
+                          Automation detected
+                        </span>
+                      )}
+                      {scrapedData.businessData.technologies?.length ? (
+                        <span className="inline-flex items-center rounded-full bg-[#F5F5F4] px-2.5 py-0.5 text-[11px] font-medium text-[#57534E]">
+                          {scrapedData.businessData.technologies.length} technologies found
+                        </span>
+                      ) : null}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {scrapingFailed && (
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-[#78716C]">
+                    Website analysis couldn&apos;t complete — no worries, we&apos;ll work with the info you provided
+                  </span>
+                </div>
+              )}
+            </motion.div>
+          )}
         </motion.div>
       </div>
     );
