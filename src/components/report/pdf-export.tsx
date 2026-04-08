@@ -19,6 +19,26 @@ async function generatePdf(
     import('jspdf'),
   ]);
 
+  // html2canvas cannot parse modern CSS color functions (oklab, oklch).
+  // Replace them with sRGB fallbacks before capture, then restore.
+  const overrides: { el: HTMLElement; prop: string; original: string }[] = [];
+  const colorProps = ['color', 'background-color', 'border-color', 'outline-color'];
+  element.querySelectorAll<HTMLElement>('*').forEach((el) => {
+    const style = getComputedStyle(el);
+    for (const prop of colorProps) {
+      const val = style.getPropertyValue(prop);
+      if (val && /oklab|oklch/i.test(val)) {
+        overrides.push({ el, prop, original: el.style.getPropertyValue(prop) });
+        // Force browser to resolve to sRGB via canvas
+        const ctx = document.createElement('canvas').getContext('2d');
+        if (ctx) {
+          ctx.fillStyle = val;
+          el.style.setProperty(prop, ctx.fillStyle);
+        }
+      }
+    }
+  });
+
   // Capture the report content
   const canvas = await html2canvas(element, {
     scale: 2,
@@ -27,6 +47,15 @@ async function generatePdf(
     backgroundColor: '#F5F5F4',
     windowWidth: 900,
   });
+
+  // Restore original styles
+  for (const { el, prop, original } of overrides) {
+    if (original) {
+      el.style.setProperty(prop, original);
+    } else {
+      el.style.removeProperty(prop);
+    }
+  }
 
   const imgWidth = 210; // A4 mm
   const pageHeight = 297;

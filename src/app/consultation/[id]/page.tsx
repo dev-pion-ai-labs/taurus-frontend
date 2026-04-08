@@ -582,7 +582,7 @@ export default function ConsultationPage() {
     return (
       <CompletedScreen
         sessionId={sessionId}
-        totalQuestions={currentQuestion?.progress?.total ?? session._count?.questions ?? 0}
+        totalQuestions={currentQuestion?.progress?.answered ?? session._count?.questions ?? 0}
         startedAt={session.startedAt}
         completedAt={session.completedAt}
       />

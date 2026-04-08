@@ -119,6 +119,7 @@ export default function QuestionnairePage() {
 
   useEffect(() => {
     if (!hydrated || isLoadingUser || !user) return;
+    if (showSuccess) return; // Don't redirect while showing success screen
     if (!user.firstName || !user.lastName) {
       router.replace('/onboarding');
       return;
@@ -127,7 +128,7 @@ export default function QuestionnairePage() {
       router.replace('/dashboard');
       return;
     }
-  }, [hydrated, isLoadingUser, user, router]);
+  }, [hydrated, isLoadingUser, user, router, showSuccess]);
 
   // ---------------------------------------------------------------------------
   // Save progress to backend (fire-and-forget)
@@ -207,7 +208,7 @@ export default function QuestionnairePage() {
     );
   }
   if (!user?.firstName || !user?.lastName) return null;
-  if (user?.onboardingCompleted) return null;
+  if (user?.onboardingCompleted && !showSuccess) return null;
 
   // ---------------------------------------------------------------------------
   // Success overlay
