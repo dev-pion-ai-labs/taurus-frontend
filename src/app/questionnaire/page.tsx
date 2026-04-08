@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Check, ArrowLeft, ArrowRight, Loader2, Sparkles, Globe } from 'lucide-react';
+import { Check, ArrowRight, Loader2, Sparkles, Globe } from 'lucide-react';
 import { useAuthStore } from '@/stores/auth-store';
 import { useOnboardingStore } from '@/stores/onboarding-store';
 import { useMe } from '@/hooks/use-user';
@@ -181,11 +181,6 @@ export default function QuestionnairePage() {
       onSuccess: () => {
         setShowSuccess(true);
         reset();
-        // If no company URL, redirect immediately
-        if (!finalData.companyUrl) {
-          setTimeout(() => router.replace('/dashboard'), 2000);
-        }
-        // Otherwise, scraping polling will handle the redirect (see effect below)
       },
       onError: (error) => {
         toast.error(error.message || 'Failed to submit. Please try again.');
@@ -193,23 +188,7 @@ export default function QuestionnairePage() {
     });
   }, [submitOnboarding, formData, reset, router]);
 
-  // Redirect to dashboard when scraping finishes (or after timeout)
-  useEffect(() => {
-    if (!showSuccess) return;
-
-    // If no company URL, already handled above
-    if (!submittedUrl) return;
-
-    const status = scrapingStatus.data?.status;
-    if (status === 'COMPLETED' || status === 'FAILED') {
-      setTimeout(() => router.replace('/dashboard'), 1500);
-      return;
-    }
-
-    // Timeout fallback — don't keep user waiting more than 2 minutes
-    const timeout = setTimeout(() => router.replace('/dashboard'), 120_000);
-    return () => clearTimeout(timeout);
-  }, [showSuccess, submittedUrl, scrapingStatus.data?.status, router]);
+  // No auto-redirect — user controls when to proceed via "Go to Dashboard" button
 
   // ---------------------------------------------------------------------------
   // Guard renders
@@ -249,107 +228,133 @@ export default function QuestionnairePage() {
     return (
       <div className="flex min-h-screen items-center justify-center bg-[#F5F5F4] px-4">
         <motion.div
-          initial={{ scale: 0.8, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          transition={{ duration: 0.4, ease: 'easeOut' }}
-          className="flex flex-col items-center gap-6 max-w-md"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+          className="flex flex-col items-center gap-8 max-w-lg w-full"
         >
+          {/* Success icon */}
           <motion.div
-            initial={{ scale: 0 }}
-            animate={{ scale: 1 }}
-            transition={{ delay: 0.15, type: 'spring', stiffness: 300, damping: 20 }}
-            className="flex h-20 w-20 items-center justify-center rounded-full bg-[#1C1917]"
+            initial={{ scale: 0, rotate: -20 }}
+            animate={{ scale: 1, rotate: 0 }}
+            transition={{ delay: 0.2, type: 'spring', stiffness: 200, damping: 15 }}
+            className="relative"
           >
-            {isScrapingActive ? (
-              <Globe className="h-10 w-10 text-white animate-pulse" />
-            ) : (
-              <Check className="h-10 w-10 text-white" strokeWidth={3} />
-            )}
+            <div className="flex h-24 w-24 items-center justify-center rounded-full bg-[#1C1917] shadow-xl shadow-[#1C1917]/20">
+              <motion.div
+                initial={{ pathLength: 0 }}
+                animate={{ pathLength: 1 }}
+                transition={{ delay: 0.5, duration: 0.4 }}
+              >
+                <Check className="h-12 w-12 text-white" strokeWidth={2.5} />
+              </motion.div>
+            </div>
+            {/* Subtle glow ring */}
+            <motion.div
+              className="absolute inset-0 rounded-full border-2 border-[#1C1917]/10"
+              initial={{ scale: 1, opacity: 0.5 }}
+              animate={{ scale: 1.4, opacity: 0 }}
+              transition={{ delay: 0.5, duration: 1.2, ease: 'easeOut' }}
+            />
           </motion.div>
 
+          {/* Headline */}
           <motion.div
-            initial={{ opacity: 0, y: 8 }}
+            initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3, duration: 0.3 }}
-            className="text-center"
+            transition={{ delay: 0.4, duration: 0.5 }}
+            className="text-center space-y-3"
           >
-            <p className="text-2xl font-bold text-[#1C1917]">
-              {isScrapingActive
-                ? 'Finishing up...'
-                : 'You\u0027re all set!'}
-            </p>
-            <p className="mt-2 text-sm text-[#78716C]">
-              {isScrapingActive
-                ? scrapeStatus === 'QUEUED'
-                  ? 'Your website is queued for analysis...'
-                  : 'Scanning your website for business intelligence...'
-                : 'Preparing your personalized dashboard...'}
+            <h1 className="text-3xl font-bold text-[#1C1917] tracking-tight">
+              Setup complete
+            </h1>
+            <p className="text-base text-[#78716C] leading-relaxed max-w-sm mx-auto">
+              {hasUrl && isScrapingActive
+                ? 'We\'re analyzing your data and preparing your personalized insights.'
+                : hasUrl && scrapingDone
+                  ? 'Your data has been analyzed. Your personalized insights are ready.'
+                  : 'Your workspace is ready. Let\'s explore what AI can do for your business.'}
             </p>
           </motion.div>
 
-          {/* Scraping progress / result feedback */}
+          {/* Background processing card */}
           {hasUrl && (
             <motion.div
-              initial={{ opacity: 0, y: 12 }}
+              initial={{ opacity: 0, y: 16 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.5, duration: 0.3 }}
-              className="w-full rounded-xl border border-[#E7E5E4] bg-white p-5"
+              transition={{ delay: 0.6, duration: 0.5 }}
+              className="w-full rounded-2xl border border-[#E7E5E4] bg-white p-6 shadow-sm"
             >
-              <div className="flex items-center gap-3 mb-3">
-                <Globe className="h-4 w-4 text-[#78716C] shrink-0" />
-                <span className="text-sm font-medium text-[#1C1917] truncate">
-                  {submittedUrl}
-                </span>
+              <div className="flex items-center gap-3 mb-4">
+                {isScrapingActive ? (
+                  <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[#F5F5F4]">
+                    <Loader2 className="h-4.5 w-4.5 text-[#1C1917] animate-spin" />
+                  </div>
+                ) : scrapingDone ? (
+                  <div className="flex h-9 w-9 items-center justify-center rounded-full bg-emerald-50">
+                    <Check className="h-4.5 w-4.5 text-emerald-600" />
+                  </div>
+                ) : (
+                  <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[#F5F5F4]">
+                    <Globe className="h-4.5 w-4.5 text-[#78716C]" />
+                  </div>
+                )}
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-semibold text-[#1C1917]">
+                    {isScrapingActive
+                      ? 'Analyzing your business...'
+                      : scrapingDone
+                        ? 'Analysis complete'
+                        : 'Analysis unavailable'}
+                  </p>
+                  <p className="text-xs text-[#A8A29E] truncate">
+                    {submittedUrl}
+                  </p>
+                </div>
               </div>
 
               {isScrapingActive && (
                 <div>
-                  <div className="h-1.5 w-full rounded-full bg-[#E7E5E4] overflow-hidden">
+                  <div className="h-1.5 w-full rounded-full bg-[#F5F5F4] overflow-hidden">
                     <motion.div
                       className="h-full bg-[#1C1917] rounded-full"
-                      initial={{ width: '15%' }}
+                      initial={{ width: '10%' }}
                       animate={{
-                        width: scrapeStatus === 'IN_PROGRESS' ? '75%' : '35%',
+                        width: scrapeStatus === 'IN_PROGRESS' ? '70%' : '30%',
                       }}
-                      transition={{ duration: 3, ease: 'easeInOut' }}
+                      transition={{ duration: 4, ease: 'easeInOut' }}
                     />
                   </div>
-                  <p className="mt-2 text-xs text-[#A8A29E]">
+                  <p className="mt-2.5 text-xs text-[#A8A29E]">
                     {scrapeStatus === 'IN_PROGRESS'
-                      ? 'Discovering pages and extracting data...'
-                      : 'Waiting to start...'}
+                      ? 'Preparing your recommendations...'
+                      : 'Starting analysis...'}
                   </p>
                 </div>
               )}
 
               {scrapingDone && (
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2">
-                    <Check className="h-4 w-4 text-emerald-600" />
-                    <span className="text-sm text-emerald-700 font-medium">
-                      Website analyzed successfully
-                    </span>
-                  </div>
+                <div className="space-y-3">
                   {pagesScraped && (
                     <p className="text-xs text-[#78716C]">
-                      Scanned {pagesScraped} page{pagesScraped > 1 ? 's' : ''} for AI &amp; automation insights
+                      Analyzed {pagesScraped} page{pagesScraped > 1 ? 's' : ''} for insights
                     </p>
                   )}
                   {scrapedData?.businessData && (
-                    <div className="flex flex-wrap gap-1.5 mt-1">
+                    <div className="flex flex-wrap gap-1.5">
                       {scrapedData.businessData.aiDetected && (
-                        <span className="inline-flex items-center gap-1 rounded-full bg-violet-50 px-2.5 py-0.5 text-[11px] font-medium text-violet-700">
+                        <span className="inline-flex items-center gap-1 rounded-full bg-violet-50 px-2.5 py-1 text-[11px] font-medium text-violet-700">
                           <Sparkles className="h-3 w-3" />
                           AI usage detected
                         </span>
                       )}
                       {scrapedData.businessData.automationDetected && (
-                        <span className="inline-flex items-center rounded-full bg-blue-50 px-2.5 py-0.5 text-[11px] font-medium text-blue-700">
+                        <span className="inline-flex items-center rounded-full bg-blue-50 px-2.5 py-1 text-[11px] font-medium text-blue-700">
                           Automation detected
                         </span>
                       )}
                       {scrapedData.businessData.technologies?.length ? (
-                        <span className="inline-flex items-center rounded-full bg-[#F5F5F4] px-2.5 py-0.5 text-[11px] font-medium text-[#57534E]">
+                        <span className="inline-flex items-center rounded-full bg-[#F5F5F4] px-2.5 py-1 text-[11px] font-medium text-[#57534E]">
                           {scrapedData.businessData.technologies.length} technologies found
                         </span>
                       ) : null}
@@ -359,14 +364,39 @@ export default function QuestionnairePage() {
               )}
 
               {scrapingFailed && (
-                <div className="flex items-center gap-2">
-                  <span className="text-sm text-[#78716C]">
-                    Website analysis couldn&apos;t complete — no worries, we&apos;ll work with the info you provided
-                  </span>
-                </div>
+                <p className="text-sm text-[#78716C]">
+                  Website analysis couldn&apos;t complete — no worries, we&apos;ll use the info you provided.
+                </p>
               )}
             </motion.div>
           )}
+
+          {/* Hint text */}
+          {hasUrl && isScrapingActive && (
+            <motion.p
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 1, duration: 0.5 }}
+              className="text-xs text-[#A8A29E] text-center"
+            >
+              This may take a few seconds — you can continue to the dashboard anytime.
+            </motion.p>
+          )}
+
+          {/* CTA button */}
+          <motion.div
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.8, duration: 0.4 }}
+          >
+            <button
+              onClick={() => router.replace('/dashboard')}
+              className="inline-flex h-12 items-center gap-2.5 rounded-xl bg-[#1C1917] px-8 text-sm font-semibold text-white shadow-lg shadow-[#1C1917]/15 transition-all hover:opacity-90 hover:shadow-xl hover:shadow-[#1C1917]/20 active:scale-[0.98]"
+            >
+              Go to Dashboard
+              <ArrowRight className="h-4 w-4" />
+            </button>
+          </motion.div>
         </motion.div>
       </div>
     );
