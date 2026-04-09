@@ -409,4 +409,103 @@ export interface ExecutiveDashboard {
     impact: 'HIGH' | 'MEDIUM' | 'LOW';
     effort: 'LOW' | 'MEDIUM' | 'HIGH';
   }[];
+  tracker: {
+    valueRealized: number;
+    valueIdentified: number;
+    activeActions: number;
+    completedActions: number;
+    blockedActions: number;
+    totalActions: number;
+  };
+}
+
+// ─── Transformation Tracker ──────────────────────────────
+
+export type ActionStatus =
+  | 'BACKLOG'
+  | 'THIS_SPRINT'
+  | 'IN_PROGRESS'
+  | 'AWAITING_APPROVAL'
+  | 'DEPLOYED'
+  | 'VERIFIED';
+
+export type ActionPriority = 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
+
+export type EstimatedEffort = 'HOURS' | 'DAYS' | 'WEEKS' | 'MONTHS';
+
+export type SprintStatus = 'PLANNING' | 'ACTIVE' | 'COMPLETED';
+
+export interface ActionAssignee {
+  id: string;
+  firstName: string | null;
+  lastName: string | null;
+  email: string;
+}
+
+export interface TransformationAction {
+  id: string;
+  organizationId: string;
+  sessionId: string | null;
+  sourceRecommendationId: string | null;
+  title: string;
+  description: string | null;
+  department: string | null;
+  category: string | null;
+  status: ActionStatus;
+  assigneeId: string | null;
+  priority: ActionPriority;
+  estimatedValue: number | null;
+  actualValue: number | null;
+  estimatedEffort: EstimatedEffort | null;
+  phase: number | null;
+  orderIndex: number;
+  dueDate: string | null;
+  startedAt: string | null;
+  deployedAt: string | null;
+  verifiedAt: string | null;
+  blockerNote: string | null;
+  sprintId: string | null;
+  createdAt: string;
+  updatedAt: string;
+  assignee: ActionAssignee | null;
+  sprint: { id: string; name: string } | null;
+  _count?: { comments: number };
+  comments?: ActionComment[];
+}
+
+export interface Sprint {
+  id: string;
+  organizationId: string;
+  name: string;
+  number: number;
+  startDate: string;
+  endDate: string;
+  goal: string | null;
+  status: SprintStatus;
+  createdAt: string;
+  updatedAt: string;
+  _count?: { actions: number };
+}
+
+export interface ActionComment {
+  id: string;
+  actionId: string;
+  userId: string;
+  content: string;
+  createdAt: string;
+  user: ActionAssignee;
+}
+
+export interface TrackerBoard {
+  columns: Record<ActionStatus, TransformationAction[]>;
+}
+
+export interface TrackerStats {
+  total: number;
+  byStatus: Record<ActionStatus, number>;
+  valueIdentified: number;
+  valueRealized: number;
+  blockedCount: number;
+  activeActions: number;
+  completedActions: number;
 }

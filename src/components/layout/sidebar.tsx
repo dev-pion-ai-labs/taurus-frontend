@@ -7,6 +7,7 @@ import {
   ClipboardList,
   Building2,
   Network,
+  KanbanSquare,
   Settings,
   FileText,
   LogOut,
@@ -34,6 +35,7 @@ const navItems: NavItem[] = [
   { label: 'Consultations', href: '/dashboard#sessions', icon: ClipboardList },
   { label: 'Company Profile', href: '/company-profile', icon: Building2 },
   { label: 'Departments', href: '/departments', icon: Network },
+  { label: 'Tracker', href: '/tracker', icon: KanbanSquare },
   { label: 'Settings', href: '/settings', icon: Settings },
   { label: 'Templates', href: '/admin/templates', icon: FileText, adminOnly: true },
 ];
