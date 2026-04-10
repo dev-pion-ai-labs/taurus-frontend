@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   DndContext,
   DragOverlay,
@@ -9,8 +9,14 @@ import {
   useSensor,
   useSensors,
   type DragStartEvent,
+  type DragOverEvent,
   type DragEndEvent,
 } from '@dnd-kit/core';
+import {
+  SortableContext,
+  verticalListSortingStrategy,
+  arrayMove,
+} from '@dnd-kit/sortable';
 import { useDroppable } from '@dnd-kit/core';
 import { ActionCard } from './action-card';
 import { useMoveAction } from '@/hooks/use-tracker';
@@ -74,6 +80,8 @@ const COLUMNS: {
   },
 ];
 
+const COLUMN_IDS = new Set(COLUMNS.map((c) => c.id as string));
+
 interface KanbanBoardProps {
   columns: Record<ActionStatus, TransformationAction[]>;
   onCardClick: (action: TransformationAction) => void;
@@ -122,6 +130,10 @@ function DroppableColumn({
           ${isOver ? 'bg-[#F5F5F4]/80' : ''}
         `}
       >
+        <SortableContext
+          items={actions.map((a) => a.id)}
+          strategy={verticalListSortingStrategy}
+        >
           {actions.map((action) => (
             <ActionCard
               key={action.id}
@@ -129,6 +141,7 @@ function DroppableColumn({
               onClick={() => onCardClick(action)}
             />
           ))}
+        </SortableContext>
 
         {actions.length === 0 && (
           <div className="flex items-center justify-center h-20 text-xs text-[#A8A29E]">
@@ -140,58 +153,133 @@ function DroppableColumn({
   );
 }
 
-export function KanbanBoard({ columns, onCardClick }: KanbanBoardProps) {
+/** Find which column a card lives in */
+function findColumnOfCard(
+  cols: Record<ActionStatus, TransformationAction[]>,
+  cardId: string,
+): ActionStatus | null {
+  for (const status of Object.keys(cols) as ActionStatus[]) {
+    if (cols[status].some((a) => a.id === cardId)) return status;
+  }
+  return null;
+}
+
+export function KanbanBoard({ columns: serverColumns, onCardClick }: KanbanBoardProps) {
+  // Local copy of columns so we can move cards in real-time during drag
+  const [localColumns, setLocalColumns] = useState(serverColumns);
   const [activeId, setActiveId] = useState<string | null>(null);
   const moveAction = useMoveAction();
+  // Track the source column when drag starts for the final commit
+  const dragOrigin = useRef<{ status: ActionStatus; index: number } | null>(null);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } })
   );
 
-  // Find the active action across all columns
-  const allActions = Object.values(columns).flat();
+  // Sync local state with server data when not mid-drag
+  useEffect(() => {
+    if (!activeId) setLocalColumns(serverColumns);
+  }, [serverColumns, activeId]);
+
+  const allActions = Object.values(localColumns).flat();
   const activeAction = activeId
     ? allActions.find((a) => a.id === activeId)
     : null;
 
-  function handleDragStart(event: DragStartEvent) {
-    setActiveId(event.active.id as string);
-  }
+  const handleDragStart = useCallback((event: DragStartEvent) => {
+    const id = event.active.id as string;
+    setActiveId(id);
+    // Remember where the card started
+    const col = findColumnOfCard(serverColumns, id);
+    if (col) {
+      const idx = serverColumns[col].findIndex((a) => a.id === id);
+      dragOrigin.current = { status: col, index: idx };
+    }
+  }, [serverColumns]);
 
-  function handleDragEnd(event: DragEndEvent) {
-    setActiveId(null);
+  const handleDragOver = useCallback((event: DragOverEvent) => {
     const { active, over } = event;
     if (!over) return;
 
+    const activeCardId = active.id as string;
+    const overId = over.id as string;
+
+    setLocalColumns((prev) => {
+      const fromCol = findColumnOfCard(prev, activeCardId);
+      if (!fromCol) return prev;
+
+      // Determine target column: either overId is a column, or it's a card in some column
+      let toCol: ActionStatus;
+      if (COLUMN_IDS.has(overId)) {
+        toCol = overId as ActionStatus;
+      } else {
+        const col = findColumnOfCard(prev, overId);
+        if (!col) return prev;
+        toCol = col;
+      }
+
+      // Same column — reorder
+      if (fromCol === toCol) {
+        const items = prev[fromCol];
+        const oldIdx = items.findIndex((a) => a.id === activeCardId);
+        const newIdx = items.findIndex((a) => a.id === overId);
+        if (oldIdx === -1 || newIdx === -1 || oldIdx === newIdx) return prev;
+        return { ...prev, [fromCol]: arrayMove(items, oldIdx, newIdx) };
+      }
+
+      // Cross-column — move card
+      const fromItems = [...prev[fromCol]];
+      const toItems = [...prev[toCol]];
+      const fromIdx = fromItems.findIndex((a) => a.id === activeCardId);
+      if (fromIdx === -1) return prev;
+
+      const [moved] = fromItems.splice(fromIdx, 1);
+      const movedCard = { ...moved, status: toCol };
+
+      // Insert at the position of the hovered card, or at the end
+      const overIdx = toItems.findIndex((a) => a.id === overId);
+      if (overIdx >= 0) {
+        toItems.splice(overIdx, 0, movedCard);
+      } else {
+        toItems.push(movedCard);
+      }
+
+      return { ...prev, [fromCol]: fromItems, [toCol]: toItems };
+    });
+  }, []);
+
+  const handleDragEnd = useCallback((event: DragEndEvent) => {
+    setActiveId(null);
+    const { active, over } = event;
+    const origin = dragOrigin.current;
+    dragOrigin.current = null;
+
+    if (!over || !origin) return;
+
     const actionId = active.id as string;
-    const targetColumnId = over.id as string;
 
-    // Check if dropped on a column
-    const isColumn = COLUMNS.some((c) => c.id === targetColumnId);
-    if (!isColumn) return;
+    // Read final position from localColumns (already updated by onDragOver)
+    const finalCol = findColumnOfCard(localColumns, actionId);
+    if (!finalCol) return;
 
-    // Find current column of the action
-    const currentColumn = Object.entries(columns).find(([, actions]) =>
-      actions.some((a) => a.id === actionId)
-    );
+    const finalIdx = localColumns[finalCol].findIndex((a) => a.id === actionId);
 
-    if (!currentColumn) return;
-    const [currentStatus] = currentColumn;
-
-    if (currentStatus === targetColumnId) return;
+    // Skip if nothing changed
+    if (finalCol === origin.status && finalIdx === origin.index) return;
 
     moveAction.mutate({
       id: actionId,
-      status: targetColumnId,
-      orderIndex: columns[targetColumnId as ActionStatus]?.length || 0,
+      status: finalCol,
+      orderIndex: finalIdx,
     });
-  }
+  }, [localColumns, moveAction]);
 
   return (
     <DndContext
       sensors={sensors}
       collisionDetection={closestCorners}
       onDragStart={handleDragStart}
+      onDragOver={handleDragOver}
       onDragEnd={handleDragEnd}
     >
       <div className="flex gap-3 overflow-x-auto pb-4 h-full">
@@ -199,7 +287,7 @@ export function KanbanBoard({ columns, onCardClick }: KanbanBoardProps) {
           <DroppableColumn
             key={column.id}
             column={column}
-            actions={columns[column.id] || []}
+            actions={localColumns[column.id] || []}
             onCardClick={onCardClick}
           />
         ))}

@@ -1,6 +1,7 @@
 'use client';
 
-import { useDraggable } from '@dnd-kit/core';
+import { useSortable } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 import { MessageSquare, AlertTriangle } from 'lucide-react';
 import { formatDollar } from '@/lib/format';
 import type { TransformationAction } from '@/types';
@@ -29,8 +30,15 @@ export function ActionCard({ action, onClick }: ActionCardProps) {
     attributes,
     listeners,
     setNodeRef,
+    transform,
+    transition,
     isDragging,
-  } = useDraggable({ id: action.id });
+  } = useSortable({ id: action.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  };
 
   const priority = priorityConfig[action.priority] || priorityConfig.MEDIUM;
   const category = action.category
@@ -53,6 +61,7 @@ export function ActionCard({ action, onClick }: ActionCardProps) {
   return (
     <div
       ref={setNodeRef}
+      style={style}
       {...attributes}
       {...listeners}
       onClick={onClick}
