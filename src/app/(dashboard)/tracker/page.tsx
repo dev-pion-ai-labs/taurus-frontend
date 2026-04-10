@@ -25,7 +25,7 @@ export default function TrackerPage() {
     department?: string;
     priority?: string;
   }>({});
-  const [selectedActionId, setSelectedActionId] = useState<string | null>(null);
+  const [selectedAction, setSelectedAction] = useState<TransformationAction | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
 
@@ -39,7 +39,7 @@ export default function TrackerPage() {
   const departments = [...new Set(allActions.map((a) => a.department).filter(Boolean))] as string[];
 
   function handleCardClick(action: TransformationAction) {
-    setSelectedActionId(action.id);
+    setSelectedAction(action);
     setDetailOpen(true);
   }
 
@@ -160,11 +160,11 @@ export default function TrackerPage() {
 
       {/* Dialogs */}
       <ActionDetailDialog
-        actionId={selectedActionId}
+        action={selectedAction}
         open={detailOpen}
         onClose={() => {
           setDetailOpen(false);
-          setSelectedActionId(null);
+          setSelectedAction(null);
         }}
       />
       <ImportDialog open={importOpen} onClose={() => setImportOpen(false)} />

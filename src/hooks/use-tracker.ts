@@ -7,6 +7,7 @@ import type {
   TrackerBoard,
   TrackerStats,
   TransformationAction,
+  ActionStatus,
   Sprint,
   ActionComment,
 } from '@/types';
@@ -98,7 +99,27 @@ export function useUpdateAction() {
         method: 'PATCH',
         body: JSON.stringify(data),
       }),
-    onSuccess: () => {
+    onMutate: async ({ id, ...data }) => {
+      await queryClient.cancelQueries({ queryKey: ['tracker', 'action', id] });
+
+      const previousAction = queryClient.getQueryData<TransformationAction>([
+        'tracker', 'action', id,
+      ]);
+
+      // Optimistically patch the action detail cache
+      queryClient.setQueryData<TransformationAction>(
+        ['tracker', 'action', id],
+        (old) => (old ? { ...old, ...data } as TransformationAction : old),
+      );
+
+      return { previousAction };
+    },
+    onError: (_err, { id }, context) => {
+      if (context?.previousAction) {
+        queryClient.setQueryData(['tracker', 'action', id], context.previousAction);
+      }
+    },
+    onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ['tracker'] });
     },
   });
@@ -121,7 +142,57 @@ export function useMoveAction() {
         method: 'PATCH',
         body: JSON.stringify({ status, orderIndex }),
       }),
-    onSuccess: () => {
+    onMutate: async ({ id, status }) => {
+      // Cancel in-flight board fetches so they don't overwrite the optimistic update
+      await queryClient.cancelQueries({ queryKey: ['tracker', 'board'] });
+
+      // Snapshot every board query for rollback
+      const previousBoards = queryClient.getQueriesData<TrackerBoard>({
+        queryKey: ['tracker', 'board'],
+      });
+
+      // Optimistically move the card in the cache
+      queryClient.setQueriesData<TrackerBoard>(
+        { queryKey: ['tracker', 'board'] },
+        (old) => {
+          if (!old) return old;
+          const newColumns = { ...old.columns };
+          let movedAction: TransformationAction | undefined;
+
+          // Remove from source column
+          for (const col of Object.keys(newColumns) as ActionStatus[]) {
+            const idx = newColumns[col].findIndex((a) => a.id === id);
+            if (idx !== -1) {
+              movedAction = newColumns[col][idx];
+              newColumns[col] = newColumns[col].filter((a) => a.id !== id);
+              break;
+            }
+          }
+
+          // Add to target column with updated status
+          if (movedAction) {
+            newColumns[status as ActionStatus] = [
+              ...newColumns[status as ActionStatus],
+              { ...movedAction, status: status as ActionStatus },
+            ];
+          }
+
+          return { ...old, columns: newColumns };
+        },
+      );
+
+      return { previousBoards };
+    },
+    onError: (_err, _vars, context) => {
+      // Rollback on failure
+      if (context?.previousBoards) {
+        for (const [queryKey, data] of context.previousBoards) {
+          queryClient.setQueryData(queryKey, data);
+        }
+      }
+    },
+    onSettled: () => {
+      // Refetch to reconcile with server truth
       queryClient.invalidateQueries({ queryKey: ['tracker'] });
     },
   });
@@ -135,7 +206,36 @@ export function useDeleteAction() {
       apiClient<{ success: boolean }>(`/tracker/actions/${id}`, {
         method: 'DELETE',
       }),
-    onSuccess: () => {
+    onMutate: async (id) => {
+      await queryClient.cancelQueries({ queryKey: ['tracker', 'board'] });
+
+      const previousBoards = queryClient.getQueriesData<TrackerBoard>({
+        queryKey: ['tracker', 'board'],
+      });
+
+      // Optimistically remove from board
+      queryClient.setQueriesData<TrackerBoard>(
+        { queryKey: ['tracker', 'board'] },
+        (old) => {
+          if (!old) return old;
+          const newColumns = { ...old.columns };
+          for (const col of Object.keys(newColumns) as ActionStatus[]) {
+            newColumns[col] = newColumns[col].filter((a) => a.id !== id);
+          }
+          return { ...old, columns: newColumns };
+        },
+      );
+
+      return { previousBoards };
+    },
+    onError: (_err, _id, context) => {
+      if (context?.previousBoards) {
+        for (const [queryKey, data] of context.previousBoards) {
+          queryClient.setQueryData(queryKey, data);
+        }
+      }
+    },
+    onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ['tracker'] });
     },
   });

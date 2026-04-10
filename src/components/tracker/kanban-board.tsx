@@ -11,10 +11,6 @@ import {
   type DragStartEvent,
   type DragEndEvent,
 } from '@dnd-kit/core';
-import {
-  SortableContext,
-  verticalListSortingStrategy,
-} from '@dnd-kit/sortable';
 import { useDroppable } from '@dnd-kit/core';
 import { ActionCard } from './action-card';
 import { useMoveAction } from '@/hooks/use-tracker';
@@ -126,10 +122,6 @@ function DroppableColumn({
           ${isOver ? 'bg-[#F5F5F4]/80' : ''}
         `}
       >
-        <SortableContext
-          items={actions.map((a) => a.id)}
-          strategy={verticalListSortingStrategy}
-        >
           {actions.map((action) => (
             <ActionCard
               key={action.id}
@@ -137,7 +129,6 @@ function DroppableColumn({
               onClick={() => onCardClick(action)}
             />
           ))}
-        </SortableContext>
 
         {actions.length === 0 && (
           <div className="flex items-center justify-center h-20 text-xs text-[#A8A29E]">
@@ -214,7 +205,7 @@ export function KanbanBoard({ columns, onCardClick }: KanbanBoardProps) {
         ))}
       </div>
 
-      <DragOverlay>
+      <DragOverlay dropAnimation={null}>
         {activeAction && (
           <div className="rotate-3 scale-105">
             <ActionCard action={activeAction} onClick={() => {}} />

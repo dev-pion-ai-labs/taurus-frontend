@@ -22,22 +22,33 @@ async function generatePdf(
   // html2canvas cannot parse modern CSS color functions (oklab, oklch).
   // Replace them with sRGB fallbacks before capture, then restore.
   const overrides: { el: HTMLElement; prop: string; original: string }[] = [];
-  const colorProps = ['color', 'background-color', 'border-color', 'outline-color'];
-  element.querySelectorAll<HTMLElement>('*').forEach((el) => {
-    const style = getComputedStyle(el);
-    for (const prop of colorProps) {
-      const val = style.getPropertyValue(prop);
-      if (val && /oklab|oklch/i.test(val)) {
+
+  // Convert oklch/oklab substrings within any CSS value to sRGB equivalents.
+  function toSrgb(cssValue: string): string {
+    return cssValue.replace(/oklch\([^)]+\)|oklab\([^)]+\)/gi, (match) => {
+      const ctx = document.createElement('canvas').getContext('2d');
+      if (ctx) {
+        ctx.fillStyle = '#000000';
+        ctx.fillStyle = match;
+        if (ctx.fillStyle !== '#000000') return ctx.fillStyle;
+      }
+      return 'rgba(0,0,0,0)';
+    });
+  }
+
+  const hasModernColor = /oklab|oklch/i;
+  const targets = [element, ...Array.from(element.querySelectorAll<HTMLElement>('*'))];
+  for (const el of targets) {
+    const computed = getComputedStyle(el);
+    for (let i = 0; i < computed.length; i++) {
+      const prop = computed[i];
+      const val = computed.getPropertyValue(prop);
+      if (val && hasModernColor.test(val)) {
         overrides.push({ el, prop, original: el.style.getPropertyValue(prop) });
-        // Force browser to resolve to sRGB via canvas
-        const ctx = document.createElement('canvas').getContext('2d');
-        if (ctx) {
-          ctx.fillStyle = val;
-          el.style.setProperty(prop, ctx.fillStyle);
-        }
+        el.style.setProperty(prop, toSrgb(val));
       }
     }
-  });
+  }
 
   // Capture the report content
   const canvas = await html2canvas(element, {

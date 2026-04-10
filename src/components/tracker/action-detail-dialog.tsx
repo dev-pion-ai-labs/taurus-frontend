@@ -42,20 +42,24 @@ const priorityColors: Record<string, string> = {
 };
 
 interface ActionDetailDialogProps {
-  actionId: string | null;
+  action: TransformationAction | null;
   open: boolean;
   onClose: () => void;
 }
 
 export function ActionDetailDialog({
-  actionId,
+  action: initialAction,
   open,
   onClose,
 }: ActionDetailDialogProps) {
-  const { data: action, isLoading } = useTrackerAction(open ? actionId : null);
+  // Show the board data instantly; fetch full details (comments, etc.) in the background
+  const { data: fetchedAction } = useTrackerAction(open ? initialAction?.id ?? null : null);
+  const action = fetchedAction ?? initialAction;
+
   const updateAction = useUpdateAction();
   const deleteAction = useDeleteAction();
   const addComment = useAddComment();
+  const actionId = action?.id ?? null;
 
   const [commentText, setCommentText] = useState('');
   const [blockerText, setBlockerText] = useState('');
@@ -89,7 +93,7 @@ export function ActionDetailDialog({
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="sm:max-w-lg max-h-[85vh] overflow-y-auto">
-        {isLoading || !action ? (
+        {!action ? (
           <div className="flex items-center justify-center py-12">
             <div className="w-6 h-6 border-2 border-[#E11D48] border-t-transparent rounded-full animate-spin" />
           </div>
