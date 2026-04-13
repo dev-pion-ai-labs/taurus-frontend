@@ -533,9 +533,81 @@ function ChartCard({ title, children }: { title: string; children: React.ReactNo
   );
 }
 
+function ChartSkeleton() {
+  return (
+    <div className="rounded-xl border border-[#E7E5E4] bg-white p-5">
+      <Skeleton className="mb-4 h-4 w-40" />
+      <div className="space-y-3">
+        <div className="flex items-end gap-2">
+          <Skeleton className="h-24 w-full rounded-lg" />
+        </div>
+        <div className="flex justify-between">
+          <Skeleton className="h-3 w-12" />
+          <Skeleton className="h-3 w-12" />
+          <Skeleton className="h-3 w-12" />
+          <Skeleton className="h-3 w-12" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ExecutiveOverviewSkeleton() {
+  return (
+    <motion.div
+      variants={itemVariants}
+      className="rounded-xl border border-[#E7E5E4] bg-white p-6"
+    >
+      <div className="grid grid-cols-1 gap-6 md:grid-cols-[auto_1fr_1fr]">
+        {/* Gauge placeholder */}
+        <div className="flex items-center gap-4">
+          <Skeleton className="h-20 w-20 rounded-full" />
+          <div className="flex flex-col gap-2">
+            <Skeleton className="h-5 w-20 rounded-full" />
+            <Skeleton className="h-4 w-28" />
+          </div>
+        </div>
+        {/* Stat cards */}
+        <div className="flex items-center gap-4">
+          <div className="flex-1 rounded-lg border border-[#E7E5E4] bg-[#FAFAF9] p-4">
+            <Skeleton className="mb-2 h-3 w-28" />
+            <Skeleton className="h-6 w-24" />
+          </div>
+          <div className="flex-1 rounded-lg border border-[#E7E5E4] bg-[#FAFAF9] p-4">
+            <Skeleton className="mb-2 h-3 w-28" />
+            <Skeleton className="h-6 w-16" />
+          </div>
+        </div>
+        {/* Department heatmap */}
+        <div className="flex flex-col gap-2">
+          <Skeleton className="h-3 w-20" />
+          <div className="space-y-2">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <div key={i} className="flex items-center gap-2">
+                <Skeleton className="h-3 w-20" />
+                <Skeleton className="h-2 flex-1 rounded-full" />
+                <Skeleton className="h-3 w-7" />
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+      {/* Recommendations skeleton */}
+      <div className="mt-6 border-t border-[#F5F5F4] pt-4">
+        <Skeleton className="mb-3 h-4 w-36" />
+        <div className="space-y-2">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <Skeleton key={i} className="h-10 w-full rounded-lg" />
+          ))}
+        </div>
+      </div>
+    </motion.div>
+  );
+}
+
 function MaturityTrendTab() {
   const { data, isLoading } = useMaturityTrend();
-  if (isLoading) return <div className="h-48 animate-pulse rounded-lg bg-[#F5F5F4]" />;
+  if (isLoading) return <ChartSkeleton />;
   if (!data?.length) return <p className="py-8 text-center text-sm text-[#78716C]">No maturity data yet. Complete a consultation to see trends.</p>;
 
   return (
@@ -570,7 +642,7 @@ function MaturityTrendTab() {
 
 function RoadmapProgressTab() {
   const { data, isLoading } = useRoadmapProgress();
-  if (isLoading) return <div className="h-48 animate-pulse rounded-lg bg-[#F5F5F4]" />;
+  if (isLoading) return <ChartSkeleton />;
   if (!data) return <p className="py-8 text-center text-sm text-[#78716C]">No roadmap data yet.</p>;
 
   const pieData = Object.entries(data.byStatus).map(([status, val]) => ({
@@ -616,7 +688,7 @@ function RoadmapProgressTab() {
 
 function ValueRealizationTab() {
   const { data, isLoading } = useValueRealization();
-  if (isLoading) return <div className="h-48 animate-pulse rounded-lg bg-[#F5F5F4]" />;
+  if (isLoading) return <ChartSkeleton />;
   if (!data) return <p className="py-8 text-center text-sm text-[#78716C]">No value data yet.</p>;
 
   return (
@@ -665,7 +737,7 @@ function ValueRealizationTab() {
 
 function SprintVelocityTab() {
   const { data, isLoading } = useSprintVelocity();
-  if (isLoading) return <div className="h-48 animate-pulse rounded-lg bg-[#F5F5F4]" />;
+  if (isLoading) return <ChartSkeleton />;
   if (!data?.sprints?.length) return <p className="py-8 text-center text-sm text-[#78716C]">No completed sprints yet.</p>;
 
   const trendColor = data.trend === 'IMPROVING' ? '#16a34a' : data.trend === 'DECLINING' ? '#dc2626' : '#78716C';
@@ -696,7 +768,7 @@ function SprintVelocityTab() {
 
 function StackOverviewTab() {
   const { data, isLoading } = useStackOverview();
-  if (isLoading) return <div className="h-48 animate-pulse rounded-lg bg-[#F5F5F4]" />;
+  if (isLoading) return <ChartSkeleton />;
   if (!data || data.totalTools === 0) return <p className="py-8 text-center text-sm text-[#78716C]">No tools in your stack. <a href="/stack" className="text-[#7c3aed] hover:underline">Add tools</a></p>;
 
   const pieData = Object.entries(data.byCategory).map(([cat, count], i) => ({
@@ -838,11 +910,26 @@ export default function DashboardPage() {
         Dashboard
       </motion.h1>
 
-      {/* AI Transformation Overview — only when data exists */}
-      {showExecOverview && <ExecutiveOverview data={execData} />}
+      {/* AI Transformation Overview */}
+      {execLoading ? (
+        <ExecutiveOverviewSkeleton />
+      ) : showExecOverview ? (
+        <ExecutiveOverview data={execData} />
+      ) : null}
 
       {/* Analytics Section */}
-      {showExecOverview && <DashboardAnalytics />}
+      {execLoading ? (
+        <motion.div variants={itemVariants} className="mt-4 rounded-xl border border-[#E7E5E4] bg-white p-6">
+          <div className="mb-4 flex gap-1 rounded-lg bg-[#F5F5F4] p-1">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <Skeleton key={i} className="h-8 w-24 rounded-md" />
+            ))}
+          </div>
+          <ChartSkeleton />
+        </motion.div>
+      ) : showExecOverview ? (
+        <DashboardAnalytics />
+      ) : null}
 
       {/* Layout grid */}
       <div className={`grid grid-cols-1 gap-4 lg:grid-cols-[1fr_320px] ${showExecOverview ? 'mt-4' : ''}`}>

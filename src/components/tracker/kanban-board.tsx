@@ -1,16 +1,17 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo, memo } from 'react';
 import {
   DndContext,
   DragOverlay,
-  closestCorners,
+  closestCenter,
   PointerSensor,
   useSensor,
   useSensors,
   type DragStartEvent,
   type DragOverEvent,
   type DragEndEvent,
+  MeasuringStrategy,
 } from '@dnd-kit/core';
 import {
   SortableContext,
@@ -18,7 +19,7 @@ import {
   arrayMove,
 } from '@dnd-kit/sortable';
 import { useDroppable } from '@dnd-kit/core';
-import { ActionCard } from './action-card';
+import { ActionCard, ActionCardOverlay } from './action-card';
 import { useMoveAction } from '@/hooks/use-tracker';
 import type { TransformationAction, ActionStatus } from '@/types';
 
@@ -88,7 +89,7 @@ interface KanbanBoardProps {
   onCardUpdate?: (id: string, data: Record<string, unknown>) => void;
 }
 
-function DroppableColumn({
+const DroppableColumn = memo(function DroppableColumn({
   column,
   actions,
   onCardClick,
@@ -100,6 +101,8 @@ function DroppableColumn({
   onCardUpdate?: (id: string, data: Record<string, unknown>) => void;
 }) {
   const { setNodeRef, isOver } = useDroppable({ id: column.id });
+
+  const itemIds = useMemo(() => actions.map((a) => a.id), [actions]);
 
   return (
     <div
@@ -129,12 +132,12 @@ function DroppableColumn({
         ref={setNodeRef}
         className={`
           flex-1 overflow-y-auto p-2 space-y-2 min-h-[100px]
-          transition-colors duration-150
+          transition-colors duration-200 ease-out
           ${isOver ? 'bg-[#F5F5F4]/80' : ''}
         `}
       >
         <SortableContext
-          items={actions.map((a) => a.id)}
+          items={itemIds}
           strategy={verticalListSortingStrategy}
         >
           {actions.map((action) => (
@@ -155,7 +158,7 @@ function DroppableColumn({
       </div>
     </div>
   );
-}
+});
 
 /** Find which column a card lives in */
 function findColumnOfCard(
@@ -168,16 +171,28 @@ function findColumnOfCard(
   return null;
 }
 
+const measuring = {
+  droppable: {
+    strategy: MeasuringStrategy.Always,
+  },
+};
+
+const dropAnimationConfig = {
+  duration: 200,
+  easing: 'cubic-bezier(0.25, 1, 0.5, 1)',
+};
+
 export function KanbanBoard({ columns: serverColumns, onCardClick, onCardUpdate }: KanbanBoardProps) {
-  // Local copy of columns so we can move cards in real-time during drag
   const [localColumns, setLocalColumns] = useState(serverColumns);
   const [activeId, setActiveId] = useState<string | null>(null);
   const moveAction = useMoveAction();
-  // Track the source column when drag starts for the final commit
   const dragOrigin = useRef<{ status: ActionStatus; index: number } | null>(null);
+  // Ref to read localColumns in handleDragEnd without stale closure
+  const localColumnsRef = useRef(localColumns);
+  localColumnsRef.current = localColumns;
 
   const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 8 } })
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
   );
 
   // Sync local state with server data when not mid-drag
@@ -185,15 +200,18 @@ export function KanbanBoard({ columns: serverColumns, onCardClick, onCardUpdate 
     if (!activeId) setLocalColumns(serverColumns);
   }, [serverColumns, activeId]);
 
-  const allActions = Object.values(localColumns).flat();
-  const activeAction = activeId
-    ? allActions.find((a) => a.id === activeId)
-    : null;
+  const activeAction = useMemo(() => {
+    if (!activeId) return null;
+    for (const actions of Object.values(localColumns)) {
+      const found = actions.find((a) => a.id === activeId);
+      if (found) return found;
+    }
+    return null;
+  }, [activeId, localColumns]);
 
   const handleDragStart = useCallback((event: DragStartEvent) => {
     const id = event.active.id as string;
     setActiveId(id);
-    // Remember where the card started
     const col = findColumnOfCard(serverColumns, id);
     if (col) {
       const idx = serverColumns[col].findIndex((a) => a.id === id);
@@ -212,7 +230,6 @@ export function KanbanBoard({ columns: serverColumns, onCardClick, onCardUpdate 
       const fromCol = findColumnOfCard(prev, activeCardId);
       if (!fromCol) return prev;
 
-      // Determine target column: either overId is a column, or it's a card in some column
       let toCol: ActionStatus;
       if (COLUMN_IDS.has(overId)) {
         toCol = overId as ActionStatus;
@@ -240,7 +257,6 @@ export function KanbanBoard({ columns: serverColumns, onCardClick, onCardUpdate 
       const [moved] = fromItems.splice(fromIdx, 1);
       const movedCard = { ...moved, status: toCol };
 
-      // Insert at the position of the hovered card, or at the end
       const overIdx = toItems.findIndex((a) => a.id === overId);
       if (overIdx >= 0) {
         toItems.splice(overIdx, 0, movedCard);
@@ -253,22 +269,20 @@ export function KanbanBoard({ columns: serverColumns, onCardClick, onCardUpdate 
   }, []);
 
   const handleDragEnd = useCallback((event: DragEndEvent) => {
-    setActiveId(null);
     const { active, over } = event;
     const origin = dragOrigin.current;
     dragOrigin.current = null;
+    setActiveId(null);
 
     if (!over || !origin) return;
 
     const actionId = active.id as string;
-
-    // Read final position from localColumns (already updated by onDragOver)
-    const finalCol = findColumnOfCard(localColumns, actionId);
+    const cols = localColumnsRef.current;
+    const finalCol = findColumnOfCard(cols, actionId);
     if (!finalCol) return;
 
-    const finalIdx = localColumns[finalCol].findIndex((a) => a.id === actionId);
+    const finalIdx = cols[finalCol].findIndex((a) => a.id === actionId);
 
-    // Skip if nothing changed
     if (finalCol === origin.status && finalIdx === origin.index) return;
 
     moveAction.mutate({
@@ -276,15 +290,21 @@ export function KanbanBoard({ columns: serverColumns, onCardClick, onCardUpdate 
       status: finalCol,
       orderIndex: finalIdx,
     });
-  }, [localColumns, moveAction]);
+  }, [moveAction]);
+
+  const stableOnCardClick = useCallback(
+    (action: TransformationAction) => onCardClick(action),
+    [onCardClick]
+  );
 
   return (
     <DndContext
       sensors={sensors}
-      collisionDetection={closestCorners}
+      collisionDetection={closestCenter}
       onDragStart={handleDragStart}
       onDragOver={handleDragOver}
       onDragEnd={handleDragEnd}
+      measuring={measuring}
     >
       <div className="flex gap-3 overflow-x-auto pb-4 h-full">
         {COLUMNS.map((column) => (
@@ -292,17 +312,15 @@ export function KanbanBoard({ columns: serverColumns, onCardClick, onCardUpdate 
             key={column.id}
             column={column}
             actions={localColumns[column.id] || []}
-            onCardClick={onCardClick}
+            onCardClick={stableOnCardClick}
             onCardUpdate={onCardUpdate}
           />
         ))}
       </div>
 
-      <DragOverlay dropAnimation={null}>
+      <DragOverlay dropAnimation={dropAnimationConfig}>
         {activeAction && (
-          <div className="rotate-3 scale-105">
-            <ActionCard action={activeAction} onClick={() => {}} />
-          </div>
+          <ActionCardOverlay action={activeAction} />
         )}
       </DragOverlay>
     </DndContext>

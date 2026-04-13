@@ -142,54 +142,9 @@ export function useMoveAction() {
         method: 'PATCH',
         body: JSON.stringify({ status, orderIndex }),
       }),
-    onMutate: async ({ id, status }) => {
-      // Cancel in-flight board fetches so they don't overwrite the optimistic update
+    onMutate: async () => {
+      // Cancel in-flight board fetches so they don't overwrite the local optimistic state
       await queryClient.cancelQueries({ queryKey: ['tracker', 'board'] });
-
-      // Snapshot every board query for rollback
-      const previousBoards = queryClient.getQueriesData<TrackerBoard>({
-        queryKey: ['tracker', 'board'],
-      });
-
-      // Optimistically move the card in the cache
-      queryClient.setQueriesData<TrackerBoard>(
-        { queryKey: ['tracker', 'board'] },
-        (old) => {
-          if (!old) return old;
-          const newColumns = { ...old.columns };
-          let movedAction: TransformationAction | undefined;
-
-          // Remove from source column
-          for (const col of Object.keys(newColumns) as ActionStatus[]) {
-            const idx = newColumns[col].findIndex((a) => a.id === id);
-            if (idx !== -1) {
-              movedAction = newColumns[col][idx];
-              newColumns[col] = newColumns[col].filter((a) => a.id !== id);
-              break;
-            }
-          }
-
-          // Add to target column with updated status
-          if (movedAction) {
-            newColumns[status as ActionStatus] = [
-              ...newColumns[status as ActionStatus],
-              { ...movedAction, status: status as ActionStatus },
-            ];
-          }
-
-          return { ...old, columns: newColumns };
-        },
-      );
-
-      return { previousBoards };
-    },
-    onError: (_err, _vars, context) => {
-      // Rollback on failure
-      if (context?.previousBoards) {
-        for (const [queryKey, data] of context.previousBoards) {
-          queryClient.setQueryData(queryKey, data);
-        }
-      }
     },
     onSettled: () => {
       // Refetch to reconcile with server truth

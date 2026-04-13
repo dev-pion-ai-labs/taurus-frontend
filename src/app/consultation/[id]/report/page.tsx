@@ -1006,7 +1006,7 @@ function LoadingSkeleton() {
 
 function CompletedReport({ report }: { report: TransformationReport }) {
   const reportRef = useRef<HTMLDivElement>(null);
-  const { data: dashboard } = useExecutiveDashboard();
+  const { data: dashboard, isLoading: dashboardLoading } = useExecutiveDashboard();
 
   return (
     <div
@@ -1095,7 +1095,7 @@ function CompletedReport({ report }: { report: TransformationReport }) {
           )}
 
           {/* 10. Historical Comparison */}
-          <ReportComparisonSection dashboard={dashboard} />
+          <ReportComparisonSection dashboard={dashboard} isLoading={dashboardLoading} />
 
           {/* Footer CTA */}
           <motion.div

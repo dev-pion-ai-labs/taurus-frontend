@@ -19,6 +19,7 @@ import {
   ArrowDownRight,
 } from 'lucide-react';
 import { formatDollar, getScoreColor } from '@/lib/format';
+import { Skeleton } from '@/components/ui/skeleton';
 import type { ExecutiveDashboard } from '@/types';
 
 /* ------------------------------------------------------------------ */
@@ -326,11 +327,61 @@ function KpiDeltaCards({
 /*  Main Comparison Section                                            */
 /* ================================================================== */
 
+function ComparisonSkeleton() {
+  return (
+    <motion.section
+      initial={{ opacity: 0 }}
+      whileInView={{ opacity: 1 }}
+      viewport={{ once: true, amount: 0.1 }}
+      transition={{ duration: 0.5 }}
+    >
+      <div className="mb-4 flex items-center gap-3">
+        <Skeleton className="h-5 w-40" />
+        <Skeleton className="h-5 w-14 rounded-full" />
+      </div>
+      <div className="space-y-4">
+        {/* KPI cards skeleton */}
+        <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="rounded-xl border border-[#E7E5E4] bg-white p-4">
+              <Skeleton className="mb-2 h-3 w-20" />
+              <Skeleton className="mb-1 h-7 w-16" />
+              <Skeleton className="h-3 w-24" />
+            </div>
+          ))}
+        </div>
+        {/* Charts skeleton */}
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          <div className="rounded-xl border border-[#E7E5E4] bg-white p-5">
+            <Skeleton className="mb-4 h-4 w-32" />
+            <Skeleton className="h-48 w-full rounded-lg" />
+          </div>
+          <div className="rounded-xl border border-[#E7E5E4] bg-white p-5">
+            <Skeleton className="mb-4 h-4 w-32" />
+            <div className="space-y-3">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <div key={i} className="flex items-center gap-3">
+                  <Skeleton className="h-4 w-20" />
+                  <Skeleton className="h-3 flex-1 rounded-full" />
+                  <Skeleton className="h-4 w-8" />
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    </motion.section>
+  );
+}
+
 export function ReportComparisonSection({
   dashboard,
+  isLoading,
 }: {
   dashboard: ExecutiveDashboard | undefined;
+  isLoading?: boolean;
 }) {
+  if (isLoading) return <ComparisonSkeleton />;
   if (!dashboard) return null;
 
   const hasHistory =
