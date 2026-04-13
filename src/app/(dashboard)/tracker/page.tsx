@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { useTrackerBoard, useTrackerStats } from '@/hooks/use-tracker';
+import { useTrackerBoard, useTrackerStats, useUpdateAction } from '@/hooks/use-tracker';
 import { KanbanBoard } from '@/components/tracker/kanban-board';
 import { TrackerStatsBanner } from '@/components/tracker/tracker-stats';
 import { ActionDetailDialog } from '@/components/tracker/action-detail-dialog';
@@ -31,6 +31,7 @@ export default function TrackerPage() {
 
   const { data: board, isLoading: boardLoading } = useTrackerBoard(filters);
   const { data: stats, isLoading: statsLoading } = useTrackerStats();
+  const updateAction = useUpdateAction();
 
   const columns = board?.columns || EMPTY_COLUMNS;
 
@@ -41,6 +42,10 @@ export default function TrackerPage() {
   function handleCardClick(action: TransformationAction) {
     setSelectedAction(action);
     setDetailOpen(true);
+  }
+
+  function handleCardUpdate(id: string, data: Record<string, unknown>) {
+    updateAction.mutate({ id, ...data });
   }
 
   return (
@@ -154,7 +159,7 @@ export default function TrackerPage() {
         </div>
       ) : (
         <div className="flex-1 overflow-hidden">
-          <KanbanBoard columns={columns} onCardClick={handleCardClick} />
+          <KanbanBoard columns={columns} onCardClick={handleCardClick} onCardUpdate={handleCardUpdate} />
         </div>
       )}
 

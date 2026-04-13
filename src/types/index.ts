@@ -509,3 +509,132 @@ export interface TrackerStats {
   activeActions: number;
   completedActions: number;
 }
+
+// ─── AI Discovery (Module 1) ────────────────────────────
+
+export type DiscoveryStatus = 'GENERATING' | 'COMPLETED' | 'FAILED';
+
+export interface DiscoveryReport {
+  id: string;
+  url: string;
+  domain: string;
+  email: string | null;
+  organizationId: string | null;
+  score: number | null;
+  maturityLevel: string | null;
+  industry: string | null;
+  companySize: string | null;
+  techStack: { name: string; category: string }[] | null;
+  aiSignals: { type: string; detail: string }[] | null;
+  summary: string | null;
+  recommendations: { title: string; description: string; priority: string }[] | null;
+  status: DiscoveryStatus;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface DiscoveryScanResponse {
+  id: string;
+  status: DiscoveryStatus;
+  url: string;
+  domain: string;
+}
+
+// ─── AI Stack Intelligence (Module 6) ──────────────────
+
+export type ToolCategory =
+  | 'AI_PLATFORM' | 'AUTOMATION' | 'ANALYTICS' | 'CRM'
+  | 'COMMUNICATION' | 'DEVELOPMENT' | 'SECURITY'
+  | 'INDUSTRY_SPECIFIC' | 'OTHER';
+
+export type ToolSource = 'ONBOARDING' | 'CONSULTATION' | 'DISCOVERY' | 'RECOMMENDATION' | 'MANUAL';
+
+export type ToolStatus = 'IDENTIFIED' | 'EVALUATING' | 'ACTIVE' | 'DEPRECATED';
+
+export interface ToolEntry {
+  id: string;
+  organizationId: string;
+  name: string;
+  category: ToolCategory;
+  source: ToolSource;
+  sourceId: string | null;
+  status: ToolStatus;
+  departmentIds: string[] | null;
+  monthlyCost: number | null;
+  userCount: number | null;
+  rating: number | null;
+  notes: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface StackSummary {
+  totalTools: number;
+  monthlySpend: number;
+  annualSpend: number;
+  byCategory: Record<string, number>;
+  byStatus: Record<string, number>;
+}
+
+export interface StackRecommendation {
+  title: string;
+  description: string;
+  department: string;
+  annualValue: number;
+  impact: 'HIGH' | 'MEDIUM' | 'LOW';
+  effort: 'LOW' | 'MEDIUM' | 'HIGH';
+}
+
+export interface StackSyncResult {
+  onboarding: number;
+  report: number;
+  discovery: number;
+  total: number;
+}
+
+// ─── Extended Dashboard Analytics ──────────────────────
+
+export interface MaturityTrendPoint {
+  date: string;
+  score: number | null;
+  maturityLevel: string | null;
+  change: number;
+}
+
+export interface RoadmapProgress {
+  totalActions: number;
+  completedActions: number;
+  completionRate: number;
+  byStatus: Record<string, { count: number; value: number }>;
+  byDepartment: Record<string, { total: number; completed: number }>;
+}
+
+export interface ValueRealization {
+  totalEstimated: number;
+  totalRealized: number;
+  realizationRate: number;
+  timeline: { date: string; cumulative: number }[];
+}
+
+export interface SprintVelocity {
+  sprints: {
+    sprint: string;
+    number: number;
+    startDate: string;
+    endDate: string;
+    totalActions: number;
+    completedActions: number;
+    valueDelivered: number;
+  }[];
+  averageVelocity: number;
+  trend: 'IMPROVING' | 'DECLINING' | 'STABLE' | 'INSUFFICIENT_DATA';
+}
+
+export interface StackOverview {
+  totalTools: number;
+  monthlySpend: number;
+  annualSpend: number;
+  byCategory: Record<string, number>;
+  byStatus: Record<string, number>;
+  activeTools: number;
+}

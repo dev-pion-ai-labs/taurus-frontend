@@ -85,16 +85,19 @@ const COLUMN_IDS = new Set(COLUMNS.map((c) => c.id as string));
 interface KanbanBoardProps {
   columns: Record<ActionStatus, TransformationAction[]>;
   onCardClick: (action: TransformationAction) => void;
+  onCardUpdate?: (id: string, data: Record<string, unknown>) => void;
 }
 
 function DroppableColumn({
   column,
   actions,
   onCardClick,
+  onCardUpdate,
 }: {
   column: (typeof COLUMNS)[number];
   actions: TransformationAction[];
   onCardClick: (action: TransformationAction) => void;
+  onCardUpdate?: (id: string, data: Record<string, unknown>) => void;
 }) {
   const { setNodeRef, isOver } = useDroppable({ id: column.id });
 
@@ -139,6 +142,7 @@ function DroppableColumn({
               key={action.id}
               action={action}
               onClick={() => onCardClick(action)}
+              onUpdate={onCardUpdate}
             />
           ))}
         </SortableContext>
@@ -164,7 +168,7 @@ function findColumnOfCard(
   return null;
 }
 
-export function KanbanBoard({ columns: serverColumns, onCardClick }: KanbanBoardProps) {
+export function KanbanBoard({ columns: serverColumns, onCardClick, onCardUpdate }: KanbanBoardProps) {
   // Local copy of columns so we can move cards in real-time during drag
   const [localColumns, setLocalColumns] = useState(serverColumns);
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -289,6 +293,7 @@ export function KanbanBoard({ columns: serverColumns, onCardClick }: KanbanBoard
             column={column}
             actions={localColumns[column.id] || []}
             onCardClick={onCardClick}
+            onCardUpdate={onCardUpdate}
           />
         ))}
       </div>

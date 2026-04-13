@@ -24,6 +24,13 @@ import { useMe } from '@/hooks/use-user';
 import { useSessions, useStartSession } from '@/hooks/use-sessions';
 import { useOrgMembers } from '@/hooks/use-organizations';
 import { useExecutiveDashboard } from '@/hooks/use-executive-dashboard';
+import {
+  useMaturityTrend,
+  useRoadmapProgress,
+  useValueRealization,
+  useSprintVelocity,
+  useStackOverview,
+} from '@/hooks/use-dashboard-analytics';
 import { useCountUp } from '@/hooks/use-count-up';
 import { formatDollar, getScoreColor, getMaturityColor } from '@/lib/format';
 import { StatusBadge } from '@/components/consultation/status-badge';
@@ -37,6 +44,20 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
+
+import {
+  AreaChart,
+  Area,
+  BarChart,
+  Bar,
+  PieChart,
+  Pie,
+  Cell,
+  XAxis,
+  YAxis,
+  Tooltip,
+  ResponsiveContainer,
+} from 'recharts';
 
 import type { ConsultationSession, ExecutiveDashboard } from '@/types';
 
@@ -488,6 +509,286 @@ function SessionsTable({
 // Main page
 // ---------------------------------------------------------------------------
 
+// ---------------------------------------------------------------------------
+// Dashboard Analytics (Recharts)
+// ---------------------------------------------------------------------------
+
+const CHART_COLORS = ['#7c3aed', '#2563eb', '#16a34a', '#d97706', '#dc2626', '#06b6d4'];
+
+const STATUS_CHART_COLORS: Record<string, string> = {
+  BACKLOG: '#A8A29E',
+  THIS_SPRINT: '#2563eb',
+  IN_PROGRESS: '#d97706',
+  AWAITING_APPROVAL: '#7c3aed',
+  DEPLOYED: '#16a34a',
+  VERIFIED: '#059669',
+};
+
+function ChartCard({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <div className="rounded-xl border border-[#E7E5E4] bg-white p-5">
+      <h4 className="mb-4 text-[14px] font-semibold text-[#1C1917]">{title}</h4>
+      {children}
+    </div>
+  );
+}
+
+function MaturityTrendTab() {
+  const { data, isLoading } = useMaturityTrend();
+  if (isLoading) return <div className="h-48 animate-pulse rounded-lg bg-[#F5F5F4]" />;
+  if (!data?.length) return <p className="py-8 text-center text-sm text-[#78716C]">No maturity data yet. Complete a consultation to see trends.</p>;
+
+  return (
+    <ChartCard title="AI Maturity Score Over Time">
+      <ResponsiveContainer width="100%" height={220}>
+        <AreaChart data={data}>
+          <defs>
+            <linearGradient id="scoreGradient" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="5%" stopColor="#7c3aed" stopOpacity={0.15} />
+              <stop offset="95%" stopColor="#7c3aed" stopOpacity={0} />
+            </linearGradient>
+          </defs>
+          <XAxis
+            dataKey="date"
+            tickFormatter={(v) => new Date(String(v)).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+            tick={{ fontSize: 11, fill: '#78716C' }}
+            axisLine={false}
+            tickLine={false}
+          />
+          <YAxis domain={[0, 100]} tick={{ fontSize: 11, fill: '#78716C' }} axisLine={false} tickLine={false} />
+          <Tooltip
+            contentStyle={{ borderRadius: 8, border: '1px solid #E7E5E4', fontSize: 13 }}
+            labelFormatter={(v) => new Date(String(v)).toLocaleDateString()}
+            formatter={(v) => [`${v}/100`, 'Score']}
+          />
+          <Area type="monotone" dataKey="score" stroke="#7c3aed" strokeWidth={2} fill="url(#scoreGradient)" />
+        </AreaChart>
+      </ResponsiveContainer>
+    </ChartCard>
+  );
+}
+
+function RoadmapProgressTab() {
+  const { data, isLoading } = useRoadmapProgress();
+  if (isLoading) return <div className="h-48 animate-pulse rounded-lg bg-[#F5F5F4]" />;
+  if (!data) return <p className="py-8 text-center text-sm text-[#78716C]">No roadmap data yet.</p>;
+
+  const pieData = Object.entries(data.byStatus).map(([status, val]) => ({
+    name: status.replace(/_/g, ' '),
+    value: val.count,
+    color: STATUS_CHART_COLORS[status] || '#A8A29E',
+  }));
+
+  return (
+    <ChartCard title="Roadmap Progress">
+      <div className="flex flex-col items-center gap-6 lg:flex-row">
+        <ResponsiveContainer width={180} height={180}>
+          <PieChart>
+            <Pie data={pieData} dataKey="value" cx="50%" cy="50%" innerRadius={50} outerRadius={75} paddingAngle={2}>
+              {pieData.map((entry, i) => (
+                <Cell key={i} fill={entry.color} />
+              ))}
+            </Pie>
+            <Tooltip contentStyle={{ borderRadius: 8, border: '1px solid #E7E5E4', fontSize: 13 }} />
+          </PieChart>
+        </ResponsiveContainer>
+        <div className="flex-1 space-y-2">
+          <div className="text-center lg:text-left">
+            <span className="text-3xl font-bold text-[#1C1917]">{data.completionRate}%</span>
+            <span className="ml-1 text-sm text-[#78716C]">complete</span>
+          </div>
+          <p className="text-sm text-[#78716C]">
+            {data.completedActions} of {data.totalActions} actions deployed or verified
+          </p>
+          <div className="flex flex-wrap gap-2 pt-1">
+            {pieData.map((d) => (
+              <span key={d.name} className="flex items-center gap-1.5 text-xs text-[#78716C]">
+                <span className="h-2 w-2 rounded-full" style={{ backgroundColor: d.color }} />
+                {d.name}: {d.value}
+              </span>
+            ))}
+          </div>
+        </div>
+      </div>
+    </ChartCard>
+  );
+}
+
+function ValueRealizationTab() {
+  const { data, isLoading } = useValueRealization();
+  if (isLoading) return <div className="h-48 animate-pulse rounded-lg bg-[#F5F5F4]" />;
+  if (!data) return <p className="py-8 text-center text-sm text-[#78716C]">No value data yet.</p>;
+
+  return (
+    <ChartCard title="Value Realization">
+      <div className="mb-4 flex gap-6">
+        <div>
+          <p className="text-xs text-[#78716C]">Estimated</p>
+          <p className="text-lg font-bold text-[#1C1917]">{formatDollar(data.totalEstimated)}</p>
+        </div>
+        <div>
+          <p className="text-xs text-[#78716C]">Realized</p>
+          <p className="text-lg font-bold text-[#16a34a]">{formatDollar(data.totalRealized)}</p>
+        </div>
+        <div>
+          <p className="text-xs text-[#78716C]">Rate</p>
+          <p className="text-lg font-bold text-[#1C1917]">{data.realizationRate}%</p>
+        </div>
+      </div>
+      {data.timeline.length > 0 ? (
+        <ResponsiveContainer width="100%" height={180}>
+          <AreaChart data={data.timeline}>
+            <defs>
+              <linearGradient id="valueGradient" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="5%" stopColor="#16a34a" stopOpacity={0.15} />
+                <stop offset="95%" stopColor="#16a34a" stopOpacity={0} />
+              </linearGradient>
+            </defs>
+            <XAxis
+              dataKey="date"
+              tickFormatter={(v) => new Date(String(v)).toLocaleDateString(undefined, { month: 'short' })}
+              tick={{ fontSize: 11, fill: '#78716C' }}
+              axisLine={false}
+              tickLine={false}
+            />
+            <YAxis tickFormatter={(v) => formatDollar(Number(v))} tick={{ fontSize: 11, fill: '#78716C' }} axisLine={false} tickLine={false} />
+            <Tooltip contentStyle={{ borderRadius: 8, border: '1px solid #E7E5E4', fontSize: 13 }} formatter={(v) => [formatDollar(Number(v)), 'Cumulative']} />
+            <Area type="monotone" dataKey="cumulative" stroke="#16a34a" strokeWidth={2} fill="url(#valueGradient)" />
+          </AreaChart>
+        </ResponsiveContainer>
+      ) : (
+        <p className="py-4 text-center text-sm text-[#78716C]">Deploy actions to see value timeline</p>
+      )}
+    </ChartCard>
+  );
+}
+
+function SprintVelocityTab() {
+  const { data, isLoading } = useSprintVelocity();
+  if (isLoading) return <div className="h-48 animate-pulse rounded-lg bg-[#F5F5F4]" />;
+  if (!data?.sprints?.length) return <p className="py-8 text-center text-sm text-[#78716C]">No completed sprints yet.</p>;
+
+  const trendColor = data.trend === 'IMPROVING' ? '#16a34a' : data.trend === 'DECLINING' ? '#dc2626' : '#78716C';
+
+  return (
+    <ChartCard title="Sprint Velocity">
+      <div className="mb-4 flex items-center gap-4">
+        <div>
+          <p className="text-xs text-[#78716C]">Avg Velocity</p>
+          <p className="text-lg font-bold text-[#1C1917]">{data.averageVelocity} actions/sprint</p>
+        </div>
+        <span className="rounded-full px-2 py-0.5 text-xs font-medium" style={{ color: trendColor, backgroundColor: `${trendColor}15` }}>
+          {data.trend.replace(/_/g, ' ')}
+        </span>
+      </div>
+      <ResponsiveContainer width="100%" height={180}>
+        <BarChart data={data.sprints}>
+          <XAxis dataKey="sprint" tick={{ fontSize: 11, fill: '#78716C' }} axisLine={false} tickLine={false} />
+          <YAxis tick={{ fontSize: 11, fill: '#78716C' }} axisLine={false} tickLine={false} />
+          <Tooltip contentStyle={{ borderRadius: 8, border: '1px solid #E7E5E4', fontSize: 13 }} />
+          <Bar dataKey="completedActions" name="Completed" fill="#7c3aed" radius={[4, 4, 0, 0]} />
+          <Bar dataKey="totalActions" name="Total" fill="#E7E5E4" radius={[4, 4, 0, 0]} />
+        </BarChart>
+      </ResponsiveContainer>
+    </ChartCard>
+  );
+}
+
+function StackOverviewTab() {
+  const { data, isLoading } = useStackOverview();
+  if (isLoading) return <div className="h-48 animate-pulse rounded-lg bg-[#F5F5F4]" />;
+  if (!data || data.totalTools === 0) return <p className="py-8 text-center text-sm text-[#78716C]">No tools in your stack. <a href="/stack" className="text-[#7c3aed] hover:underline">Add tools</a></p>;
+
+  const pieData = Object.entries(data.byCategory).map(([cat, count], i) => ({
+    name: cat.replace(/_/g, ' '),
+    value: count,
+    color: CHART_COLORS[i % CHART_COLORS.length],
+  }));
+
+  return (
+    <ChartCard title="Stack Overview">
+      <div className="flex flex-col items-center gap-6 lg:flex-row">
+        <ResponsiveContainer width={180} height={180}>
+          <PieChart>
+            <Pie data={pieData} dataKey="value" cx="50%" cy="50%" innerRadius={50} outerRadius={75} paddingAngle={2}>
+              {pieData.map((entry, i) => (
+                <Cell key={i} fill={entry.color} />
+              ))}
+            </Pie>
+            <Tooltip contentStyle={{ borderRadius: 8, border: '1px solid #E7E5E4', fontSize: 13 }} />
+          </PieChart>
+        </ResponsiveContainer>
+        <div className="flex-1 space-y-2">
+          <div className="grid grid-cols-3 gap-3">
+            <div>
+              <p className="text-xs text-[#78716C]">Total Tools</p>
+              <p className="text-xl font-bold text-[#1C1917]">{data.totalTools}</p>
+            </div>
+            <div>
+              <p className="text-xs text-[#78716C]">Monthly</p>
+              <p className="text-xl font-bold text-[#1C1917]">{formatDollar(data.monthlySpend)}</p>
+            </div>
+            <div>
+              <p className="text-xs text-[#78716C]">Active</p>
+              <p className="text-xl font-bold text-[#16a34a]">{data.activeTools}</p>
+            </div>
+          </div>
+          <div className="flex flex-wrap gap-2 pt-1">
+            {pieData.map((d) => (
+              <span key={d.name} className="flex items-center gap-1.5 text-xs text-[#78716C]">
+                <span className="h-2 w-2 rounded-full" style={{ backgroundColor: d.color }} />
+                {d.name}: {d.value}
+              </span>
+            ))}
+          </div>
+        </div>
+      </div>
+    </ChartCard>
+  );
+}
+
+function DashboardAnalytics() {
+  const [activeTab, setActiveTab] = useState('maturity');
+
+  const tabs = [
+    { key: 'maturity', label: 'Maturity Trend' },
+    { key: 'roadmap', label: 'Roadmap' },
+    { key: 'value', label: 'Value' },
+    { key: 'velocity', label: 'Velocity' },
+    { key: 'stack', label: 'Stack' },
+  ];
+
+  return (
+    <motion.div variants={itemVariants} className="mt-4 rounded-xl border border-[#E7E5E4] bg-white p-6">
+      <div className="mb-4 flex gap-1 overflow-x-auto rounded-lg bg-[#F5F5F4] p-1">
+        {tabs.map((tab) => (
+          <button
+            key={tab.key}
+            onClick={() => setActiveTab(tab.key)}
+            className={`whitespace-nowrap rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
+              activeTab === tab.key
+                ? 'bg-white text-[#1C1917] shadow-sm'
+                : 'text-[#78716C] hover:text-[#1C1917]'
+            }`}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
+      {activeTab === 'maturity' && <MaturityTrendTab />}
+      {activeTab === 'roadmap' && <RoadmapProgressTab />}
+      {activeTab === 'value' && <ValueRealizationTab />}
+      {activeTab === 'velocity' && <SprintVelocityTab />}
+      {activeTab === 'stack' && <StackOverviewTab />}
+    </motion.div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Main Page
+// ---------------------------------------------------------------------------
+
 export default function DashboardPage() {
   const router = useRouter();
   const [page, setPage] = useState(1);
@@ -539,6 +840,9 @@ export default function DashboardPage() {
 
       {/* AI Transformation Overview — only when data exists */}
       {showExecOverview && <ExecutiveOverview data={execData} />}
+
+      {/* Analytics Section */}
+      {showExecOverview && <DashboardAnalytics />}
 
       {/* Layout grid */}
       <div className={`grid grid-cols-1 gap-4 lg:grid-cols-[1fr_320px] ${showExecOverview ? 'mt-4' : ''}`}>
