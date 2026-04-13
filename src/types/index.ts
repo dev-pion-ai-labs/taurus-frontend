@@ -715,3 +715,83 @@ export interface RiskOverview {
   upcomingRenewals: number;
   riskScore: number;
 }
+
+// ─── Implementation Engine (Module 4) ──────────────────
+
+export type DeploymentPlanStatus =
+  | 'DRAFT'
+  | 'PLANNING'
+  | 'PLAN_READY'
+  | 'APPROVED'
+  | 'EXECUTING'
+  | 'COMPLETED'
+  | 'FAILED';
+
+export type ArtifactType =
+  | 'IMPLEMENTATION_GUIDE'
+  | 'CONFIGURATION_TEMPLATE'
+  | 'INTEGRATION_CHECKLIST'
+  | 'VENDOR_EVALUATION'
+  | 'CODE_SNIPPET'
+  | 'CUSTOM';
+
+export interface DeploymentPlanStep {
+  stepNumber: number;
+  title: string;
+  description: string;
+  estimatedDuration: string;
+  dependencies: number[];
+}
+
+export interface DeploymentPlanRisk {
+  risk: string;
+  mitigation: string;
+  severity: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
+}
+
+export interface DeploymentPlan {
+  id: string;
+  organizationId: string;
+  actionId: string;
+  userId: string;
+  status: DeploymentPlanStatus;
+  title: string;
+  summary: string | null;
+  steps: DeploymentPlanStep[] | null;
+  prerequisites: string[] | null;
+  risks: DeploymentPlanRisk[] | null;
+  estimatedDuration: string | null;
+  suggestedArtifacts: ArtifactType[] | null;
+  approvedAt: string | null;
+  approvedBy: string | null;
+  rejectionNote: string | null;
+  completedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+  action: Pick<TransformationAction, 'id' | 'title' | 'status' | 'department'>;
+  user: Pick<User, 'id' | 'firstName' | 'lastName' | 'email'>;
+  artifacts?: DeploymentArtifact[];
+  _count?: { artifacts: number };
+}
+
+export interface DeploymentArtifact {
+  id: string;
+  planId: string;
+  type: ArtifactType;
+  title: string;
+  content: string;
+  metadata: unknown;
+  orderIndex: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreatePlanResponse {
+  id: string;
+  status: DeploymentPlanStatus;
+}
+
+export interface PlanActionResponse {
+  id: string;
+  status: DeploymentPlanStatus;
+}

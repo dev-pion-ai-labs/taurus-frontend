@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import {
   Dialog,
   DialogContent,
@@ -15,19 +16,24 @@ import {
   useDeleteAction,
   useAddComment,
 } from '@/hooks/use-tracker';
+import { useCreatePlan, useImplementationPlans } from '@/hooks/use-implementation';
+import { CreatePlanDialog } from '@/components/implementation/create-plan-dialog';
 import {
   AlertTriangle,
   Calendar,
   Clock,
   DollarSign,
   Layers,
+  Loader2,
   Pencil,
+  Rocket,
   Send,
   Trash2,
   User,
   X,
   Check,
 } from 'lucide-react';
+import { toast } from 'sonner';
 import type { TransformationAction } from '@/types';
 
 const statusLabels: Record<string, string> = {
@@ -239,6 +245,12 @@ export function ActionDetailDialog({
   const [commentText, setCommentText] = useState('');
   const [blockerText, setBlockerText] = useState('');
   const [editingBlocker, setEditingBlocker] = useState(false);
+  const [createPlanOpen, setCreatePlanOpen] = useState(false);
+  const router = useRouter();
+
+  const { data: existingPlans } = useImplementationPlans(
+    actionId ? { actionId } : undefined,
+  );
 
   function handleUpdate(field: string, value: unknown) {
     if (!actionId) return;
@@ -538,6 +550,52 @@ export function ActionDetailDialog({
               </div>
             </div>
 
+            {/* Deployment Plan */}
+            <div className="pt-2 border-t border-[#F5F5F4]">
+              <span className="text-[11px] uppercase tracking-wide text-[#A8A29E] font-medium">
+                Deployment Plan
+              </span>
+              {existingPlans && existingPlans.length > 0 ? (
+                <div className="mt-2 space-y-2">
+                  {existingPlans.map((plan) => (
+                    <button
+                      key={plan.id}
+                      onClick={() => {
+                        onClose();
+                        router.push('/implementation');
+                      }}
+                      className="w-full flex items-center gap-2 rounded-lg border border-[#E7E5E4] px-3 py-2 text-left hover:border-[#D6D3D1] transition-colors"
+                    >
+                      <Rocket className="w-4 h-4 text-[#E11D48] shrink-0" />
+                      <span className="text-sm font-medium text-[#1C1917] truncate flex-1">
+                        {plan.title}
+                      </span>
+                      <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full ${
+                        plan.status === 'COMPLETED' ? 'bg-green-100 text-green-700' :
+                        plan.status === 'FAILED' ? 'bg-red-100 text-red-700' :
+                        plan.status === 'PLAN_READY' ? 'bg-indigo-100 text-indigo-700' :
+                        plan.status === 'PLANNING' || plan.status === 'EXECUTING' ? 'bg-blue-100 text-blue-700' :
+                        'bg-stone-100 text-stone-600'
+                      }`}>
+                        {plan.status.replace('_', ' ')}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              ) : (
+                <div className="mt-2">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => setCreatePlanOpen(true)}
+                  >
+                    <Rocket className="w-4 h-4 mr-1.5" />
+                    Create Deployment Plan
+                  </Button>
+                </div>
+              )}
+            </div>
+
             {/* Delete */}
             <div className="pt-2 border-t border-[#F5F5F4]">
               <button
@@ -552,6 +610,20 @@ export function ActionDetailDialog({
           </>
         )}
       </DialogContent>
+
+      {action && (
+        <CreatePlanDialog
+          open={createPlanOpen}
+          onClose={() => setCreatePlanOpen(false)}
+          actionId={action.id}
+          actionTitle={action.title}
+          onCreated={() => {
+            toast.success('Plan created — redirecting to Implementation Engine');
+            onClose();
+            router.push('/implementation');
+          }}
+        />
+      )}
     </Dialog>
   );
 }
