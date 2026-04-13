@@ -10,6 +10,7 @@ import type {
   ActionStatus,
   Sprint,
   ActionComment,
+  SprintSuggestion,
 } from '@/types';
 
 // ── Board ─────────────────────────────────────────────────
@@ -268,6 +269,34 @@ export function useActionComments(actionId: string | null) {
     queryFn: () =>
       apiClient<ActionComment[]>(`/tracker/actions/${actionId}/comments`),
     enabled: !!accessToken && !!actionId,
+  });
+}
+
+// ── Stalled Actions ──────────────────────────────────────
+
+export function useStalledActions() {
+  const { accessToken } = useAuthStore();
+
+  return useQuery({
+    queryKey: ['tracker', 'alerts'],
+    queryFn: () => apiClient<TransformationAction[]>('/tracker/alerts'),
+    enabled: !!accessToken,
+  });
+}
+
+// ── AI Sprint Suggestion ─────────────────────────────────
+
+export function useSuggestSprint() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: () =>
+      apiClient<SprintSuggestion>('/tracker/sprints/suggest', {
+        method: 'POST',
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['tracker'] });
+    },
   });
 }
 

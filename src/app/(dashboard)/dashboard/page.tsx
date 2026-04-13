@@ -18,6 +18,13 @@ import {
   TrendingUp,
   TrendingDown,
   Minus,
+  Shield,
+  AlertTriangle,
+  Download,
+  CheckCircle2,
+  Clock,
+  DollarSign,
+  Calendar,
 } from 'lucide-react';
 
 import { useMe } from '@/hooks/use-user';
@@ -30,6 +37,8 @@ import {
   useValueRealization,
   useSprintVelocity,
   useStackOverview,
+  useTeamReadiness,
+  useRiskOverview,
 } from '@/hooks/use-dashboard-analytics';
 import { useCountUp } from '@/hooks/use-count-up';
 import { formatDollar, getScoreColor, getMaturityColor } from '@/lib/format';
@@ -59,6 +68,8 @@ import {
   ResponsiveContainer,
 } from 'recharts';
 
+import { useAuthStore } from '@/stores/auth-store';
+import { toast } from 'sonner';
 import type { ConsultationSession, ExecutiveDashboard } from '@/types';
 
 // ---------------------------------------------------------------------------
@@ -861,6 +872,159 @@ function DashboardAnalytics() {
 // Main Page
 // ---------------------------------------------------------------------------
 
+// ---------------------------------------------------------------------------
+// Team Readiness & Risk Overview Row
+// ---------------------------------------------------------------------------
+
+function TeamReadinessAndRiskRow() {
+  const { data: readiness } = useTeamReadiness();
+  const { data: risk } = useRiskOverview();
+  const [exporting, setExporting] = useState(false);
+
+  const handleExportPdf = async () => {
+    setExporting(true);
+    try {
+      const { accessToken } = useAuthStore.getState();
+      const res = await fetch('/api/v1/dashboard/export?format=pdf', {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
+      if (!res.ok) throw new Error('Failed to generate PDF');
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `taurus-board-report-${new Date().toISOString().slice(0, 10)}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      toast.success('Board report exported');
+    } catch {
+      toast.error('Failed to export board report');
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  const READINESS_COLORS = {
+    READY: '#16a34a',
+    DEVELOPING: '#d97706',
+    NOT_READY: '#dc2626',
+  };
+
+  return (
+    <motion.div variants={itemVariants} className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-3">
+      {/* Team Readiness */}
+      <div className="rounded-xl border border-[#E7E5E4] bg-white p-5 lg:col-span-1">
+        <div className="mb-3 flex items-center justify-between">
+          <h3 className="text-[13px] font-semibold text-[#1C1917]">Team Readiness</h3>
+          {readiness && (
+            <span className="text-[11px] text-[#78716C]">
+              {readiness.memberCount} members
+            </span>
+          )}
+        </div>
+        {readiness ? (
+          <div className="space-y-2">
+            <div className="mb-3 text-center">
+              <span className="text-3xl font-bold text-[#1C1917]">{readiness.overallReadiness}</span>
+              <span className="text-sm text-[#78716C]">/100</span>
+            </div>
+            {readiness.departments.map((d) => (
+              <div key={d.name} className="flex items-center justify-between text-[13px]">
+                <span className="text-[#44403C]">{d.name}</span>
+                <div className="flex items-center gap-2">
+                  <span className="font-medium text-[#1C1917]">{d.score}</span>
+                  <span
+                    className="rounded-full px-1.5 py-0.5 text-[10px] font-medium text-white"
+                    style={{ backgroundColor: READINESS_COLORS[d.readinessStatus] }}
+                  >
+                    {d.readinessStatus.replace('_', ' ')}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="text-sm text-[#78716C]">No readiness data yet</p>
+        )}
+      </div>
+
+      {/* Risk Overview */}
+      <div className="rounded-xl border border-[#E7E5E4] bg-white p-5 lg:col-span-1">
+        <h3 className="mb-3 text-[13px] font-semibold text-[#1C1917]">Risk Overview</h3>
+        {risk ? (
+          <div className="space-y-3">
+            <div className="mb-3 text-center">
+              <span className={`text-3xl font-bold ${
+                risk.riskScore <= 20 ? 'text-[#16a34a]' :
+                risk.riskScore <= 50 ? 'text-[#d97706]' :
+                'text-[#dc2626]'
+              }`}>{risk.riskScore}</span>
+              <span className="text-sm text-[#78716C]"> risk score</span>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <div className="flex items-center gap-2 rounded-lg bg-[#F5F5F4] px-3 py-2">
+                <AlertTriangle className="h-3.5 w-3.5 text-[#dc2626]" />
+                <div>
+                  <p className="text-xs text-[#78716C]">Blocked</p>
+                  <p className="text-sm font-semibold text-[#1C1917]">{risk.blockedActions}</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 rounded-lg bg-[#F5F5F4] px-3 py-2">
+                <Clock className="h-3.5 w-3.5 text-[#d97706]" />
+                <div>
+                  <p className="text-xs text-[#78716C]">Stalled</p>
+                  <p className="text-sm font-semibold text-[#1C1917]">{risk.stalledActions}</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 rounded-lg bg-[#F5F5F4] px-3 py-2">
+                <DollarSign className="h-3.5 w-3.5 text-[#78716C]" />
+                <div>
+                  <p className="text-xs text-[#78716C]">Untracked</p>
+                  <p className="text-sm font-semibold text-[#1C1917]">{risk.untrackedSpendTools}</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 rounded-lg bg-[#F5F5F4] px-3 py-2">
+                <Calendar className="h-3.5 w-3.5 text-[#3b82f6]" />
+                <div>
+                  <p className="text-xs text-[#78716C]">Renewals</p>
+                  <p className="text-sm font-semibold text-[#1C1917]">{risk.upcomingRenewals}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <p className="text-sm text-[#78716C]">No risk data yet</p>
+        )}
+      </div>
+
+      {/* Board Report Export */}
+      <div className="rounded-xl border border-[#E7E5E4] bg-white p-5 flex flex-col items-center justify-center gap-4 lg:col-span-1">
+        <Shield className="h-10 w-10 text-[#A8A29E]" />
+        <div className="text-center">
+          <h3 className="text-[13px] font-semibold text-[#1C1917]">Board Report</h3>
+          <p className="mt-1 text-xs text-[#78716C]">
+            Export a presentation-ready PDF with maturity scores, value metrics, and recommendations
+          </p>
+        </div>
+        <button
+          onClick={handleExportPdf}
+          disabled={exporting}
+          className="flex items-center gap-2 rounded-lg bg-[#1C1917] px-4 py-2 text-sm font-medium text-white hover:bg-[#292524] disabled:opacity-50"
+        >
+          {exporting ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : (
+            <Download className="h-4 w-4" />
+          )}
+          {exporting ? 'Generating...' : 'Export PDF'}
+        </button>
+      </div>
+    </motion.div>
+  );
+}
+
 export default function DashboardPage() {
   const router = useRouter();
   const [page, setPage] = useState(1);
@@ -930,6 +1094,9 @@ export default function DashboardPage() {
       ) : showExecOverview ? (
         <DashboardAnalytics />
       ) : null}
+
+      {/* Team Readiness & Risk Overview */}
+      {showExecOverview && <TeamReadinessAndRiskRow />}
 
       {/* Layout grid */}
       <div className={`grid grid-cols-1 gap-4 lg:grid-cols-[1fr_320px] ${showExecOverview ? 'mt-4' : ''}`}>

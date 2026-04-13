@@ -8,6 +8,10 @@ import type {
   StackSummary,
   StackRecommendation,
   StackSyncResult,
+  SpendTrends,
+  SpendRecord,
+  ToolROI,
+  ToolOverlapResult,
 } from '@/types';
 
 function useOrgId() {
@@ -139,5 +143,88 @@ export function useSyncStack() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['stack'] });
     },
+  });
+}
+
+// ── Spend Tracking ───────────────────────────────────────
+
+export function useAddSpend() {
+  const orgId = useOrgId();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (data: {
+      toolEntryId: string;
+      month: string;
+      amount: number;
+      notes?: string;
+    }) =>
+      apiClient<SpendRecord>(`/organizations/${orgId}/stack/spend`, {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['stack'] });
+    },
+  });
+}
+
+export function useSpendTrends(months: number = 12) {
+  const orgId = useOrgId();
+  const { accessToken } = useAuthStore();
+
+  return useQuery({
+    queryKey: ['stack', 'spend', orgId, months],
+    queryFn: () =>
+      apiClient<SpendTrends>(
+        `/organizations/${orgId}/stack/spend?months=${months}`,
+      ),
+    enabled: !!accessToken && !!orgId,
+    staleTime: 60_000,
+  });
+}
+
+// ── ROI ──────────────────────────────────────────────────
+
+export function useToolROI() {
+  const orgId = useOrgId();
+  const { accessToken } = useAuthStore();
+
+  return useQuery({
+    queryKey: ['stack', 'roi', orgId],
+    queryFn: () =>
+      apiClient<ToolROI>(`/organizations/${orgId}/stack/roi`),
+    enabled: !!accessToken && !!orgId,
+    staleTime: 60_000,
+  });
+}
+
+// ── Overlap Detection ────────────────────────────────────
+
+export function useToolOverlaps() {
+  const orgId = useOrgId();
+  const { accessToken } = useAuthStore();
+
+  return useQuery({
+    queryKey: ['stack', 'overlaps', orgId],
+    queryFn: () =>
+      apiClient<ToolOverlapResult>(`/organizations/${orgId}/stack/overlaps`),
+    enabled: !!accessToken && !!orgId,
+    staleTime: 120_000,
+  });
+}
+
+// ── Renewals ─────────────────────────────────────────────
+
+export function useUpcomingRenewals() {
+  const orgId = useOrgId();
+  const { accessToken } = useAuthStore();
+
+  return useQuery({
+    queryKey: ['stack', 'renewals', orgId],
+    queryFn: () =>
+      apiClient<ToolEntry[]>(`/organizations/${orgId}/stack/renewals`),
+    enabled: !!accessToken && !!orgId,
+    staleTime: 60_000,
   });
 }

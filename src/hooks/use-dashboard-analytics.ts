@@ -9,6 +9,8 @@ import type {
   ValueRealization,
   SprintVelocity,
   StackOverview,
+  TeamReadiness,
+  RiskOverview,
 } from '@/types';
 
 export function useMaturityTrend() {
@@ -61,6 +63,28 @@ export function useStackOverview() {
   return useQuery({
     queryKey: ['dashboard', 'stack-overview'],
     queryFn: () => apiClient<StackOverview>('/dashboard/stack-overview'),
+    enabled: !!accessToken,
+    staleTime: 60_000,
+  });
+}
+
+export function useTeamReadiness() {
+  const { accessToken } = useAuthStore();
+
+  return useQuery({
+    queryKey: ['dashboard', 'team-readiness'],
+    queryFn: () => apiClient<TeamReadiness>('/dashboard/team-readiness'),
+    enabled: !!accessToken,
+    staleTime: 60_000,
+  });
+}
+
+export function useRiskOverview() {
+  const { accessToken } = useAuthStore();
+
+  return useQuery({
+    queryKey: ['dashboard', 'risk-overview'],
+    queryFn: () => apiClient<RiskOverview>('/dashboard/risk-overview'),
     enabled: !!accessToken,
     staleTime: 60_000,
   });

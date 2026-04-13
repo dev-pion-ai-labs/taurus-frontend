@@ -1,14 +1,15 @@
 'use client';
 
 import { useState } from 'react';
-import { useTrackerBoard, useTrackerStats, useUpdateAction } from '@/hooks/use-tracker';
+import { useTrackerBoard, useTrackerStats, useUpdateAction, useStalledActions, useSuggestSprint } from '@/hooks/use-tracker';
 import { KanbanBoard } from '@/components/tracker/kanban-board';
 import { TrackerStatsBanner } from '@/components/tracker/tracker-stats';
 import { ActionDetailDialog } from '@/components/tracker/action-detail-dialog';
 import { ImportDialog } from '@/components/tracker/import-dialog';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Download, Plus, KanbanSquare } from 'lucide-react';
+import { Download, KanbanSquare, AlertTriangle, Sparkles, Loader2 } from 'lucide-react';
+import { toast } from 'sonner';
 import type { TransformationAction, ActionStatus } from '@/types';
 
 const EMPTY_COLUMNS: Record<ActionStatus, TransformationAction[]> = {
@@ -31,6 +32,8 @@ export default function TrackerPage() {
 
   const { data: board, isLoading: boardLoading } = useTrackerBoard(filters);
   const { data: stats, isLoading: statsLoading } = useTrackerStats();
+  const { data: stalledActions } = useStalledActions();
+  const suggestSprint = useSuggestSprint();
   const updateAction = useUpdateAction();
 
   const columns = board?.columns || EMPTY_COLUMNS;
@@ -59,6 +62,33 @@ export default function TrackerPage() {
           </h1>
         </div>
         <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              suggestSprint.mutate(undefined, {
+                onSuccess: (data) => {
+                  if ('message' in data) {
+                    toast.info(data.message as string);
+                  } else {
+                    toast.success(`Sprint suggested: ${data.name}`, {
+                      description: data.rationale,
+                      duration: 8000,
+                    });
+                  }
+                },
+                onError: () => toast.error('Failed to generate sprint suggestion'),
+              });
+            }}
+            disabled={suggestSprint.isPending}
+          >
+            {suggestSprint.isPending ? (
+              <Loader2 className="w-4 h-4 mr-1.5 animate-spin" />
+            ) : (
+              <Sparkles className="w-4 h-4 mr-1.5" />
+            )}
+            Suggest Sprint
+          </Button>
           <Button variant="outline" size="sm" onClick={() => setImportOpen(true)}>
             <Download className="w-4 h-4 mr-1.5" />
             Import from Report
@@ -74,6 +104,34 @@ export default function TrackerPage() {
           <TrackerStatsBanner stats={stats} />
         </div>
       ) : null}
+
+      {/* Stalled Actions Alert */}
+      {stalledActions && stalledActions.length > 0 && (
+        <div className="shrink-0 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
+          <div className="flex items-center gap-2">
+            <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
+            <span className="text-sm font-medium text-amber-800">
+              {stalledActions.length} action{stalledActions.length > 1 ? 's' : ''} stalled for 5+ days
+            </span>
+          </div>
+          <div className="mt-2 flex flex-wrap gap-2">
+            {stalledActions.slice(0, 5).map((action) => (
+              <button
+                key={action.id}
+                onClick={() => { setSelectedAction(action); setDetailOpen(true); }}
+                className="text-xs rounded-full border border-amber-300 bg-white px-2.5 py-1 text-amber-700 hover:bg-amber-100 transition-colors"
+              >
+                {action.title}
+              </button>
+            ))}
+            {stalledActions.length > 5 && (
+              <span className="text-xs text-amber-600 py-1">
+                +{stalledActions.length - 5} more
+              </span>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Filters */}
       {departments.length > 0 && (

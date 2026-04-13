@@ -4,206 +4,44 @@ import React, { useState, useCallback } from 'react';
 import { Download, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
+import { useAuthStore } from '@/stores/auth-store';
 import type { TransformationReport } from '@/types';
 
-/* ------------------------------------------------------------------ */
-/*  PDF Generation                                                     */
-/* ------------------------------------------------------------------ */
-
-async function generatePdf(
-  element: HTMLElement,
-  report: TransformationReport
-) {
-  const [html2canvas, { default: jsPDF }] = await Promise.all([
-    import('html2canvas').then((m) => m.default),
-    import('jspdf'),
-  ]);
-
-  // html2canvas cannot parse modern CSS color functions (oklab, oklch).
-  // Replace them with sRGB fallbacks before capture, then restore.
-  const overrides: { el: HTMLElement; prop: string; original: string }[] = [];
-
-  // Convert oklch/oklab substrings within any CSS value to sRGB equivalents.
-  function toSrgb(cssValue: string): string {
-    return cssValue.replace(/oklch\([^)]+\)|oklab\([^)]+\)/gi, (match) => {
-      const ctx = document.createElement('canvas').getContext('2d');
-      if (ctx) {
-        ctx.fillStyle = '#000000';
-        ctx.fillStyle = match;
-        if (ctx.fillStyle !== '#000000') return ctx.fillStyle;
-      }
-      return 'rgba(0,0,0,0)';
-    });
-  }
-
-  const hasModernColor = /oklab|oklch/i;
-  const targets = [element, ...Array.from(element.querySelectorAll<HTMLElement>('*'))];
-  for (const el of targets) {
-    const computed = getComputedStyle(el);
-    for (let i = 0; i < computed.length; i++) {
-      const prop = computed[i];
-      const val = computed.getPropertyValue(prop);
-      if (val && hasModernColor.test(val)) {
-        overrides.push({ el, prop, original: el.style.getPropertyValue(prop) });
-        el.style.setProperty(prop, toSrgb(val));
-      }
-    }
-  }
-
-  // Capture the report content
-  const canvas = await html2canvas(element, {
-    scale: 2,
-    useCORS: true,
-    logging: false,
-    backgroundColor: '#F5F5F4',
-    windowWidth: 900,
-  });
-
-  // Restore original styles
-  for (const { el, prop, original } of overrides) {
-    if (original) {
-      el.style.setProperty(prop, original);
-    } else {
-      el.style.removeProperty(prop);
-    }
-  }
-
-  const imgWidth = 210; // A4 mm
-  const pageHeight = 297;
-  const margin = 10;
-  const contentWidth = imgWidth - margin * 2;
-  const headerHeight = 18;
-  const footerHeight = 12;
-  const usableHeight = pageHeight - headerHeight - footerHeight;
-
-  const imgHeight = (canvas.height * contentWidth) / canvas.width;
-  const pdf = new jsPDF('p', 'mm', 'a4');
-
-  const generatedDate = report.generatedAt
-    ? new Date(report.generatedAt).toLocaleDateString('en-US', {
-        month: 'long',
-        day: 'numeric',
-        year: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-      })
-    : new Date().toLocaleDateString('en-US', {
-        month: 'long',
-        day: 'numeric',
-        year: 'numeric',
-      });
-
-  // Split canvas into pages
-  let yOffset = 0;
-  let pageNum = 1;
-  const totalPages = Math.ceil(imgHeight / usableHeight);
-
-  while (yOffset < imgHeight) {
-    if (pageNum > 1) pdf.addPage();
-
-    // -- Header --
-    pdf.setFillColor(28, 25, 23); // #1C1917
-    pdf.rect(0, 0, imgWidth, headerHeight, 'F');
-    pdf.setFont('helvetica', 'bold');
-    pdf.setFontSize(11);
-    pdf.setTextColor(255, 255, 255);
-    pdf.text('TAURUS', margin, 11);
-    pdf.setFont('helvetica', 'normal');
-    pdf.setFontSize(8);
-    pdf.setTextColor(200, 200, 200);
-    pdf.text('AI Transformation Report', 38, 11);
-    pdf.text(generatedDate, imgWidth - margin, 11, { align: 'right' });
-
-    // -- Content slice --
-    // Create a temporary canvas for this page slice
-    const sliceHeight = Math.min(
-      usableHeight,
-      imgHeight - yOffset
-    );
-    const sourceY = (yOffset / imgHeight) * canvas.height;
-    const sourceH = (sliceHeight / imgHeight) * canvas.height;
-
-    const sliceCanvas = document.createElement('canvas');
-    sliceCanvas.width = canvas.width;
-    sliceCanvas.height = sourceH;
-    const ctx = sliceCanvas.getContext('2d');
-    if (ctx) {
-      ctx.drawImage(
-        canvas,
-        0,
-        sourceY,
-        canvas.width,
-        sourceH,
-        0,
-        0,
-        canvas.width,
-        sourceH
-      );
-    }
-
-    pdf.addImage(
-      sliceCanvas.toDataURL('image/jpeg', 0.92),
-      'JPEG',
-      margin,
-      headerHeight,
-      contentWidth,
-      sliceHeight
-    );
-
-    // -- Subtle watermark --
-    pdf.setGState(pdf.GState({ opacity: 0.03 }));
-    pdf.setFont('helvetica', 'bold');
-    pdf.setFontSize(72);
-    pdf.setTextColor(28, 25, 23);
-    pdf.text('TAURUS', imgWidth / 2, pageHeight / 2, {
-      align: 'center',
-      angle: 35,
-    });
-    pdf.setGState(pdf.GState({ opacity: 1 }));
-
-    // -- Footer --
-    pdf.setFillColor(245, 245, 244); // #F5F5F4
-    pdf.rect(0, pageHeight - footerHeight, imgWidth, footerHeight, 'F');
-    pdf.setDrawColor(231, 229, 228); // #E7E5E4
-    pdf.line(0, pageHeight - footerHeight, imgWidth, pageHeight - footerHeight);
-    pdf.setFont('helvetica', 'normal');
-    pdf.setFontSize(7);
-    pdf.setTextColor(120, 113, 108); // #78716C
-    pdf.text('Confidential — Generated by Taurus AI', margin, pageHeight - 4);
-    pdf.text(
-      `Page ${pageNum} of ${totalPages}`,
-      imgWidth - margin,
-      pageHeight - 4,
-      { align: 'right' }
-    );
-
-    yOffset += usableHeight;
-    pageNum++;
-  }
-
-  pdf.save(
-    `taurus-ai-report-${new Date().toISOString().slice(0, 10)}.pdf`
-  );
-}
-
-/* ------------------------------------------------------------------ */
-/*  Export Button Component                                            */
-/* ------------------------------------------------------------------ */
-
 export function PdfExportButton({
-  reportRef,
   report,
 }: {
-  reportRef: React.RefObject<HTMLDivElement | null>;
+  reportRef?: React.RefObject<HTMLDivElement | null>;
   report: TransformationReport;
 }) {
   const [exporting, setExporting] = useState(false);
 
   const handleExport = useCallback(async () => {
-    if (!reportRef.current) return;
     setExporting(true);
     try {
-      await generatePdf(reportRef.current, report);
+      const { accessToken } = useAuthStore.getState();
+      const res = await fetch(
+        `/api/v1/consultation/sessions/${report.sessionId}/report/export`,
+        {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        },
+      );
+
+      if (!res.ok) {
+        throw new Error('Failed to generate PDF');
+      }
+
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `taurus-ai-report-${new Date().toISOString().slice(0, 10)}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+
       toast.success('Report exported as PDF');
     } catch (err) {
       console.error('PDF export failed:', err);
@@ -211,7 +49,7 @@ export function PdfExportButton({
     } finally {
       setExporting(false);
     }
-  }, [reportRef, report]);
+  }, [report.sessionId]);
 
   return (
     <Button
@@ -223,7 +61,7 @@ export function PdfExportButton({
       {exporting ? (
         <>
           <Loader2 className="h-4 w-4 animate-spin" />
-          Exporting…
+          Exporting...
         </>
       ) : (
         <>

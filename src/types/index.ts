@@ -564,6 +564,10 @@ export interface ToolEntry {
   userCount: number | null;
   rating: number | null;
   notes: string | null;
+  utilizationPercent: number | null;
+  contractStartDate: string | null;
+  contractEndDate: string | null;
+  renewalAlertDays: number | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -574,6 +578,7 @@ export interface StackSummary {
   annualSpend: number;
   byCategory: Record<string, number>;
   byStatus: Record<string, number>;
+  avgUtilization: number | null;
 }
 
 export interface StackRecommendation {
@@ -637,4 +642,76 @@ export interface StackOverview {
   byCategory: Record<string, number>;
   byStatus: Record<string, number>;
   activeTools: number;
+}
+
+// ─── Phase 1 New Types ─────────────────────────────────
+
+export interface SprintSuggestion {
+  name: string;
+  goal: string;
+  suggestedActions: string[];
+  rationale: string;
+  estimatedValue: number;
+}
+
+export interface SpendRecord {
+  id: string;
+  toolEntryId: string;
+  organizationId: string;
+  month: string;
+  amount: number;
+  notes: string | null;
+  createdAt: string;
+  toolEntry: { name: string; category: string };
+}
+
+export interface SpendTrends {
+  monthly: {
+    month: string;
+    total: number;
+    byTool: { name: string; amount: number }[];
+  }[];
+  trend: 'UP' | 'DOWN' | 'STABLE';
+}
+
+export interface ToolROI {
+  tools: {
+    name: string;
+    monthlyCost: number;
+    annualCost: number;
+    estimatedValue: number;
+    roi: number | null;
+    roiStatus: 'POSITIVE' | 'NEGATIVE' | 'UNKNOWN';
+  }[];
+  totalAnnualCost: number;
+  totalEstimatedValue: number;
+}
+
+export interface ToolOverlapResult {
+  overlaps: {
+    tools: string[];
+    capability: string;
+    recommendation: string;
+    potentialSaving: number;
+  }[];
+  summary: string;
+}
+
+export interface TeamReadiness {
+  departments: {
+    name: string;
+    score: number;
+    maturityLevel: string;
+    readinessStatus: 'READY' | 'DEVELOPING' | 'NOT_READY';
+  }[];
+  overallReadiness: number;
+  memberCount: number;
+}
+
+export interface RiskOverview {
+  blockedActions: number;
+  stalledActions: number;
+  untrackedSpendTools: number;
+  upcomingRenewals: number;
+  riskScore: number;
 }
