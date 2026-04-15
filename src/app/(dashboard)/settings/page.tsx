@@ -1,12 +1,23 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { toast } from 'sonner';
 import { motion, type Variants } from 'framer-motion';
-import { Loader2, ChevronLeft, ChevronRight } from 'lucide-react';
+import {
+  Loader2,
+  ChevronLeft,
+  ChevronRight,
+  CheckCircle2,
+  XCircle,
+  AlertTriangle,
+  ExternalLink,
+  Trash2,
+  RefreshCw,
+} from 'lucide-react';
 
 import { useMe, useUpdateMe } from '@/hooks/use-user';
 import {
@@ -42,7 +53,23 @@ import {
   SelectItem,
 } from '@/components/ui/select';
 
-import type { User } from '@/types';
+import {
+  useIntegrations,
+  useTestConnection,
+  useDisconnectIntegration,
+  useConnectApiKey,
+  getOAuthConnectUrl,
+} from '@/hooks/use-integrations';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+  DialogClose,
+} from '@/components/ui/dialog';
+import type { User, OrgIntegration, IntegrationProvider } from '@/types';
 
 // ---------------------------------------------------------------------------
 // Schemas
@@ -534,11 +561,428 @@ function OrganizationTab({ user }: { user: User }) {
 }
 
 // ---------------------------------------------------------------------------
+// Integrations Tab
+// ---------------------------------------------------------------------------
+
+const PROVIDERS: {
+  id: IntegrationProvider;
+  name: string;
+  description: string;
+  authMethod: 'oauth' | 'api_key';
+}[] = [
+  {
+    id: 'SLACK',
+    name: 'Slack',
+    description: 'Create channels, post messages, and manage webhooks',
+    authMethod: 'oauth',
+  },
+  {
+    id: 'GITHUB',
+    name: 'GitHub',
+    description: 'Manage repos, workflows, and webhooks',
+    authMethod: 'oauth',
+  },
+  {
+    id: 'MAKE',
+    name: 'Make',
+    description: 'Create and manage automation scenarios',
+    authMethod: 'api_key',
+  },
+  {
+    id: 'NOTION',
+    name: 'Notion',
+    description: 'Create pages, databases, and documentation from deployment plans',
+    authMethod: 'api_key',
+  },
+  {
+    id: 'ZAPIER',
+    name: 'Zapier',
+    description: 'Connect apps and automate workflows',
+    authMethod: 'api_key',
+  },
+];
+
+function StatusIndicator({ status }: { status: OrgIntegration['status'] }) {
+  switch (status) {
+    case 'CONNECTED':
+      return (
+        <span className="flex items-center gap-1.5 text-xs font-medium text-emerald-600">
+          <CheckCircle2 className="h-3.5 w-3.5" />
+          Connected
+        </span>
+      );
+    case 'EXPIRED':
+      return (
+        <span className="flex items-center gap-1.5 text-xs font-medium text-amber-600">
+          <AlertTriangle className="h-3.5 w-3.5" />
+          Expired
+        </span>
+      );
+    case 'ERROR':
+      return (
+        <span className="flex items-center gap-1.5 text-xs font-medium text-red-600">
+          <XCircle className="h-3.5 w-3.5" />
+          Error
+        </span>
+      );
+    case 'REVOKED':
+      return (
+        <span className="flex items-center gap-1.5 text-xs font-medium text-[#78716C]">
+          <XCircle className="h-3.5 w-3.5" />
+          Revoked
+        </span>
+      );
+    default:
+      return null;
+  }
+}
+
+function getMetadataLabel(integration: OrgIntegration): string | null {
+  const meta = integration.metadata as Record<string, unknown> | null;
+  if (!meta) return null;
+
+  switch (integration.provider) {
+    case 'SLACK':
+      return meta.team_name ? `Workspace: ${meta.team_name}` : null;
+    case 'GITHUB':
+      return meta.login ? `Account: ${meta.login}` : null;
+    case 'MAKE':
+      return meta.name ? `User: ${meta.name}` : null;
+    case 'NOTION':
+      return meta.ownerName ? `Integration: ${meta.ownerName}` : null;
+    default:
+      return null;
+  }
+}
+
+function ApiKeyDialog({
+  open,
+  onOpenChange,
+  provider,
+  orgId,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  provider: { id: IntegrationProvider; name: string };
+  orgId: string | undefined;
+}) {
+  const [apiKey, setApiKey] = useState('');
+  const [label, setLabel] = useState('');
+  const connectApiKey = useConnectApiKey(orgId);
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!apiKey.trim()) return;
+
+    connectApiKey.mutate(
+      {
+        provider: provider.id,
+        apiKey: apiKey.trim(),
+        label: label.trim() || undefined,
+      },
+      {
+        onSuccess: () => {
+          toast.success(`${provider.name} connected`);
+          setApiKey('');
+          setLabel('');
+          onOpenChange(false);
+        },
+        onError: (err) => {
+          toast.error(err.message || 'Failed to connect');
+        },
+      },
+    );
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Connect {provider.name}</DialogTitle>
+          <DialogDescription>
+            Enter your {provider.name} API key to connect. You can find this in
+            your {provider.name} account settings.
+          </DialogDescription>
+        </DialogHeader>
+        <form onSubmit={handleSubmit} className="space-y-4 pt-2">
+          <div className="space-y-1.5">
+            <Label className="text-sm font-medium text-[#1C1917]">API Key</Label>
+            <Input
+              type="password"
+              value={apiKey}
+              onChange={(e) => setApiKey(e.target.value)}
+              placeholder="Enter API key"
+              className="h-10 rounded-lg border-[#E7E5E4]"
+              required
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-sm font-medium text-[#1C1917]">
+              Label <span className="text-[#A8A29E]">(optional)</span>
+            </Label>
+            <Input
+              value={label}
+              onChange={(e) => setLabel(e.target.value)}
+              placeholder={`e.g. "Production ${provider.name}"`}
+              className="h-10 rounded-lg border-[#E7E5E4]"
+            />
+          </div>
+          <DialogFooter>
+            <DialogClose>
+              <Button type="button" variant="outline" className="rounded-full">
+                Cancel
+              </Button>
+            </DialogClose>
+            <Button
+              type="submit"
+              disabled={!apiKey.trim() || connectApiKey.isPending}
+              className="rounded-full bg-[#1C1917] text-white hover:bg-[#1C1917]/90"
+            >
+              {connectApiKey.isPending && (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              )}
+              Connect
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function IntegrationsTab({ user }: { user: User }) {
+  const orgId = user.organizationId ?? undefined;
+  const searchParams = useSearchParams();
+  const { data: integrations, isLoading } = useIntegrations(orgId);
+  const testConnection = useTestConnection(orgId);
+  const disconnect = useDisconnectIntegration(orgId);
+
+  const [testingId, setTestingId] = useState<string | null>(null);
+  const [disconnectingId, setDisconnectingId] = useState<string | null>(null);
+  const [apiKeyDialog, setApiKeyDialog] = useState<{
+    open: boolean;
+    provider: (typeof PROVIDERS)[number] | null;
+  }>({ open: false, provider: null });
+
+  // Show toast after OAuth callback redirect
+  useEffect(() => {
+    const connected = searchParams.get('connected');
+    const error = searchParams.get('error');
+    if (connected) {
+      toast.success(`${connected.charAt(0).toUpperCase() + connected.slice(1)} connected successfully`);
+    } else if (error) {
+      toast.error(`Connection failed: ${error}`);
+    }
+  }, [searchParams]);
+
+  const getIntegration = (provider: IntegrationProvider): OrgIntegration | undefined =>
+    integrations?.find(
+      (i) => i.provider === provider && i.status !== 'REVOKED',
+    );
+
+  const handleConnect = (provider: (typeof PROVIDERS)[number]) => {
+    if (!orgId) return;
+
+    if (provider.authMethod === 'api_key') {
+      setApiKeyDialog({ open: true, provider });
+    } else {
+      window.location.href = getOAuthConnectUrl(orgId, provider.id);
+    }
+  };
+
+  const handleTest = (integrationId: string) => {
+    setTestingId(integrationId);
+    testConnection.mutate(integrationId, {
+      onSuccess: (result) => {
+        if (result.success) {
+          toast.success(result.message);
+        } else {
+          toast.error(result.message);
+        }
+        setTestingId(null);
+      },
+      onError: (err) => {
+        toast.error(err.message || 'Connection test failed');
+        setTestingId(null);
+      },
+    });
+  };
+
+  const handleDisconnect = (integrationId: string, providerName: string) => {
+    if (!confirm(`Disconnect ${providerName}? This will revoke all stored credentials.`)) {
+      return;
+    }
+    setDisconnectingId(integrationId);
+    disconnect.mutate(integrationId, {
+      onSuccess: () => {
+        toast.success(`${providerName} disconnected`);
+        setDisconnectingId(null);
+      },
+      onError: (err) => {
+        toast.error(err.message || 'Failed to disconnect');
+        setDisconnectingId(null);
+      },
+    });
+  };
+
+  if (isLoading) {
+    return (
+      <motion.div variants={itemVariants} className="space-y-3">
+        {Array.from({ length: 3 }).map((_, i) => (
+          <div key={i} className="rounded-xl border border-[#E7E5E4] bg-white p-5">
+            <div className="flex items-center gap-4">
+              <Skeleton className="h-10 w-10 rounded-lg" />
+              <div className="flex-1 space-y-2">
+                <Skeleton className="h-4 w-24" />
+                <Skeleton className="h-3 w-48" />
+              </div>
+              <Skeleton className="h-8 w-20 rounded-full" />
+            </div>
+          </div>
+        ))}
+      </motion.div>
+    );
+  }
+
+  return (
+    <>
+      <motion.div
+        variants={containerVariants}
+        initial="hidden"
+        animate="visible"
+        className="space-y-3"
+      >
+        {PROVIDERS.map((provider) => {
+          const integration = getIntegration(provider.id);
+          const isConnected = integration?.status === 'CONNECTED';
+          const isTesting = testingId === integration?.id;
+          const isDisconnecting = disconnectingId === integration?.id;
+          const metaLabel = integration ? getMetadataLabel(integration) : null;
+
+          return (
+            <motion.div
+              key={provider.id}
+              variants={itemVariants}
+              className="rounded-xl border border-[#E7E5E4] bg-white p-5"
+            >
+              <div className="flex items-center gap-4">
+                {/* Provider icon */}
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[#F5F5F4] text-sm font-bold text-[#57534E]">
+                  {provider.name.charAt(0)}
+                </div>
+
+                {/* Info */}
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2">
+                    <p className="text-[14px] font-semibold text-[#1C1917]">
+                      {provider.name}
+                    </p>
+                    {integration && <StatusIndicator status={integration.status} />}
+                    {provider.authMethod === 'api_key' && !integration && (
+                      <span className="rounded bg-[#F5F5F4] px-1.5 py-0.5 text-[10px] font-medium text-[#78716C]">
+                        API Key
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-[13px] text-[#78716C]">
+                    {provider.description}
+                  </p>
+                  {metaLabel && (
+                    <p className="mt-0.5 text-[12px] text-[#A8A29E]">
+                      {metaLabel}
+                    </p>
+                  )}
+                </div>
+
+                {/* Actions */}
+                <div className="flex shrink-0 items-center gap-2">
+                  {isConnected ? (
+                    <>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="rounded-full text-xs"
+                        disabled={isTesting}
+                        onClick={() => handleTest(integration!.id)}
+                      >
+                        {isTesting ? (
+                          <Loader2 className="mr-1.5 h-3 w-3 animate-spin" />
+                        ) : (
+                          <RefreshCw className="mr-1.5 h-3 w-3" />
+                        )}
+                        Test
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="rounded-full text-xs text-red-600 hover:bg-red-50 hover:text-red-700"
+                        disabled={isDisconnecting}
+                        onClick={() =>
+                          handleDisconnect(integration!.id, provider.name)
+                        }
+                      >
+                        {isDisconnecting ? (
+                          <Loader2 className="mr-1.5 h-3 w-3 animate-spin" />
+                        ) : (
+                          <Trash2 className="mr-1.5 h-3 w-3" />
+                        )}
+                        Disconnect
+                      </Button>
+                    </>
+                  ) : integration?.status === 'EXPIRED' ? (
+                    <Button
+                      size="sm"
+                      className="rounded-full bg-[#1C1917] text-xs text-white hover:bg-[#1C1917]/90"
+                      onClick={() => handleConnect(provider)}
+                    >
+                      <ExternalLink className="mr-1.5 h-3 w-3" />
+                      Reconnect
+                    </Button>
+                  ) : (
+                    <Button
+                      size="sm"
+                      className="rounded-full bg-[#1C1917] text-xs text-white hover:bg-[#1C1917]/90"
+                      onClick={() => handleConnect(provider)}
+                    >
+                      <ExternalLink className="mr-1.5 h-3 w-3" />
+                      Connect
+                    </Button>
+                  )}
+                </div>
+              </div>
+            </motion.div>
+          );
+        })}
+      </motion.div>
+
+      {/* API Key Dialog */}
+      {apiKeyDialog.provider && (
+        <ApiKeyDialog
+          open={apiKeyDialog.open}
+          onOpenChange={(open) => setApiKeyDialog({ ...apiKeyDialog, open })}
+          provider={apiKeyDialog.provider}
+          orgId={orgId}
+        />
+      )}
+    </>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Main page
 // ---------------------------------------------------------------------------
 
 export default function SettingsPage() {
   const { data: user, isLoading } = useMe();
+  const searchParams = useSearchParams();
+
+  // Auto-switch to integrations tab after OAuth callback
+  const defaultTab = useMemo(() => {
+    const connected = searchParams.get('connected');
+    const error = searchParams.get('error');
+    if (connected || error) return 'integrations';
+    return searchParams.get('tab') ?? 'profile';
+  }, [searchParams]);
 
   if (isLoading || !user) {
     return (
@@ -575,11 +1019,12 @@ export default function SettingsPage() {
       </motion.h1>
 
       {/* Tabs */}
-      <Tabs defaultValue="profile">
+      <Tabs defaultValue={defaultTab}>
         <motion.div variants={itemVariants}>
           <TabsList variant="line" className="mb-6">
             <TabsTrigger value="profile">Profile</TabsTrigger>
             <TabsTrigger value="organization">Organization</TabsTrigger>
+            <TabsTrigger value="integrations">Integrations</TabsTrigger>
           </TabsList>
         </motion.div>
 
@@ -589,6 +1034,10 @@ export default function SettingsPage() {
 
         <TabsContent value="organization">
           <OrganizationTab user={user} />
+        </TabsContent>
+
+        <TabsContent value="integrations">
+          <IntegrationsTab user={user} />
         </TabsContent>
       </Tabs>
     </motion.div>

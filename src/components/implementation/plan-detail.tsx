@@ -26,6 +26,7 @@ import {
   X,
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { DeploymentProgress } from './deployment-progress';
 import type { DeploymentPlan, DeploymentArtifact } from '@/types';
 
 interface PlanDetailProps {
@@ -319,6 +320,11 @@ export function PlanDetail({ planId, onDeleted }: PlanDetailProps) {
             ))}
           </div>
         </div>
+      )}
+
+      {/* Deployment Sessions */}
+      {(plan.status === 'COMPLETED' || plan.status === 'APPROVED') && plan.organizationId && (
+        <DeploymentProgress orgId={plan.organizationId} planId={plan.id} />
       )}
 
       {/* Refine input */}
