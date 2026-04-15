@@ -409,4 +409,494 @@ export interface ExecutiveDashboard {
     impact: 'HIGH' | 'MEDIUM' | 'LOW';
     effort: 'LOW' | 'MEDIUM' | 'HIGH';
   }[];
+  tracker: {
+    valueRealized: number;
+    valueIdentified: number;
+    activeActions: number;
+    completedActions: number;
+    blockedActions: number;
+    totalActions: number;
+  };
+}
+
+// ─── Transformation Tracker ──────────────────────────────
+
+export type ActionStatus =
+  | 'BACKLOG'
+  | 'THIS_SPRINT'
+  | 'IN_PROGRESS'
+  | 'AWAITING_APPROVAL'
+  | 'DEPLOYED'
+  | 'VERIFIED';
+
+export type ActionPriority = 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
+
+export type EstimatedEffort = 'HOURS' | 'DAYS' | 'WEEKS' | 'MONTHS';
+
+export type SprintStatus = 'PLANNING' | 'ACTIVE' | 'COMPLETED';
+
+export interface ActionAssignee {
+  id: string;
+  firstName: string | null;
+  lastName: string | null;
+  email: string;
+}
+
+export interface TransformationAction {
+  id: string;
+  organizationId: string;
+  sessionId: string | null;
+  sourceRecommendationId: string | null;
+  title: string;
+  description: string | null;
+  department: string | null;
+  category: string | null;
+  status: ActionStatus;
+  assigneeId: string | null;
+  priority: ActionPriority;
+  estimatedValue: number | null;
+  actualValue: number | null;
+  estimatedEffort: EstimatedEffort | null;
+  phase: number | null;
+  orderIndex: number;
+  dueDate: string | null;
+  startedAt: string | null;
+  deployedAt: string | null;
+  verifiedAt: string | null;
+  blockerNote: string | null;
+  sprintId: string | null;
+  createdAt: string;
+  updatedAt: string;
+  assignee: ActionAssignee | null;
+  sprint: { id: string; name: string } | null;
+  _count?: { comments: number };
+  comments?: ActionComment[];
+}
+
+export interface Sprint {
+  id: string;
+  organizationId: string;
+  name: string;
+  number: number;
+  startDate: string;
+  endDate: string;
+  goal: string | null;
+  status: SprintStatus;
+  createdAt: string;
+  updatedAt: string;
+  _count?: { actions: number };
+}
+
+export interface ActionComment {
+  id: string;
+  actionId: string;
+  userId: string;
+  content: string;
+  createdAt: string;
+  user: ActionAssignee;
+}
+
+export interface TrackerBoard {
+  columns: Record<ActionStatus, TransformationAction[]>;
+}
+
+export interface TrackerStats {
+  total: number;
+  byStatus: Record<ActionStatus, number>;
+  valueIdentified: number;
+  valueRealized: number;
+  blockedCount: number;
+  activeActions: number;
+  completedActions: number;
+}
+
+// ─── AI Discovery (Module 1) ────────────────────────────
+
+export type DiscoveryStatus = 'GENERATING' | 'COMPLETED' | 'FAILED';
+
+export interface DiscoveryReport {
+  id: string;
+  url: string;
+  domain: string;
+  email: string | null;
+  organizationId: string | null;
+  score: number | null;
+  maturityLevel: string | null;
+  industry: string | null;
+  companySize: string | null;
+  techStack: { name: string; category: string }[] | null;
+  aiSignals: { type: string; detail: string }[] | null;
+  summary: string | null;
+  recommendations: { title: string; description: string; priority: string }[] | null;
+  status: DiscoveryStatus;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface DiscoveryScanResponse {
+  id: string;
+  status: DiscoveryStatus;
+  url: string;
+  domain: string;
+}
+
+// ─── AI Stack Intelligence (Module 6) ──────────────────
+
+export type ToolCategory =
+  | 'AI_PLATFORM' | 'AUTOMATION' | 'ANALYTICS' | 'CRM'
+  | 'COMMUNICATION' | 'DEVELOPMENT' | 'SECURITY'
+  | 'INDUSTRY_SPECIFIC' | 'OTHER';
+
+export type ToolSource = 'ONBOARDING' | 'CONSULTATION' | 'DISCOVERY' | 'RECOMMENDATION' | 'MANUAL';
+
+export type ToolStatus = 'IDENTIFIED' | 'EVALUATING' | 'ACTIVE' | 'DEPRECATED';
+
+export interface ToolEntry {
+  id: string;
+  organizationId: string;
+  name: string;
+  category: ToolCategory;
+  source: ToolSource;
+  sourceId: string | null;
+  status: ToolStatus;
+  departmentIds: string[] | null;
+  monthlyCost: number | null;
+  userCount: number | null;
+  rating: number | null;
+  notes: string | null;
+  utilizationPercent: number | null;
+  contractStartDate: string | null;
+  contractEndDate: string | null;
+  renewalAlertDays: number | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface StackSummary {
+  totalTools: number;
+  monthlySpend: number;
+  annualSpend: number;
+  byCategory: Record<string, number>;
+  byStatus: Record<string, number>;
+  avgUtilization: number | null;
+}
+
+export interface StackRecommendation {
+  title: string;
+  description: string;
+  department: string;
+  annualValue: number;
+  impact: 'HIGH' | 'MEDIUM' | 'LOW';
+  effort: 'LOW' | 'MEDIUM' | 'HIGH';
+}
+
+export interface StackSyncResult {
+  onboarding: number;
+  report: number;
+  discovery: number;
+  total: number;
+}
+
+// ─── Extended Dashboard Analytics ──────────────────────
+
+export interface MaturityTrendPoint {
+  date: string;
+  score: number | null;
+  maturityLevel: string | null;
+  change: number;
+}
+
+export interface RoadmapProgress {
+  totalActions: number;
+  completedActions: number;
+  completionRate: number;
+  byStatus: Record<string, { count: number; value: number }>;
+  byDepartment: Record<string, { total: number; completed: number }>;
+}
+
+export interface ValueRealization {
+  totalEstimated: number;
+  totalRealized: number;
+  realizationRate: number;
+  timeline: { date: string; cumulative: number }[];
+}
+
+export interface SprintVelocity {
+  sprints: {
+    sprint: string;
+    number: number;
+    startDate: string;
+    endDate: string;
+    totalActions: number;
+    completedActions: number;
+    valueDelivered: number;
+  }[];
+  averageVelocity: number;
+  trend: 'IMPROVING' | 'DECLINING' | 'STABLE' | 'INSUFFICIENT_DATA';
+}
+
+export interface StackOverview {
+  totalTools: number;
+  monthlySpend: number;
+  annualSpend: number;
+  byCategory: Record<string, number>;
+  byStatus: Record<string, number>;
+  activeTools: number;
+}
+
+// ─── Phase 1 New Types ─────────────────────────────────
+
+export interface SprintSuggestion {
+  name: string;
+  goal: string;
+  suggestedActions: string[];
+  rationale: string;
+  estimatedValue: number;
+}
+
+export interface SpendRecord {
+  id: string;
+  toolEntryId: string;
+  organizationId: string;
+  month: string;
+  amount: number;
+  notes: string | null;
+  createdAt: string;
+  toolEntry: { name: string; category: string };
+}
+
+export interface SpendTrends {
+  monthly: {
+    month: string;
+    total: number;
+    byTool: { name: string; amount: number }[];
+  }[];
+  trend: 'UP' | 'DOWN' | 'STABLE';
+}
+
+export interface ToolROI {
+  tools: {
+    name: string;
+    monthlyCost: number;
+    annualCost: number;
+    estimatedValue: number;
+    roi: number | null;
+    roiStatus: 'POSITIVE' | 'NEGATIVE' | 'UNKNOWN';
+  }[];
+  totalAnnualCost: number;
+  totalEstimatedValue: number;
+}
+
+export interface ToolOverlapResult {
+  overlaps: {
+    tools: string[];
+    capability: string;
+    recommendation: string;
+    potentialSaving: number;
+  }[];
+  summary: string;
+}
+
+export interface TeamReadiness {
+  departments: {
+    name: string;
+    score: number;
+    maturityLevel: string;
+    readinessStatus: 'READY' | 'DEVELOPING' | 'NOT_READY';
+  }[];
+  overallReadiness: number;
+  memberCount: number;
+}
+
+export interface RiskOverview {
+  blockedActions: number;
+  stalledActions: number;
+  untrackedSpendTools: number;
+  upcomingRenewals: number;
+  riskScore: number;
+}
+
+// ─── Implementation Engine (Module 4) ──────────────────
+
+export type DeploymentPlanStatus =
+  | 'DRAFT'
+  | 'PLANNING'
+  | 'PLAN_READY'
+  | 'APPROVED'
+  | 'EXECUTING'
+  | 'COMPLETED'
+  | 'FAILED';
+
+export type ArtifactType =
+  | 'IMPLEMENTATION_GUIDE'
+  | 'CONFIGURATION_TEMPLATE'
+  | 'INTEGRATION_CHECKLIST'
+  | 'VENDOR_EVALUATION'
+  | 'CODE_SNIPPET'
+  | 'CUSTOM';
+
+export interface DeploymentPlanStep {
+  stepNumber: number;
+  title: string;
+  description: string;
+  estimatedDuration: string;
+  dependencies: number[];
+}
+
+export interface DeploymentPlanRisk {
+  risk: string;
+  mitigation: string;
+  severity: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
+}
+
+export interface DeploymentPlan {
+  id: string;
+  organizationId: string;
+  actionId: string;
+  userId: string;
+  status: DeploymentPlanStatus;
+  title: string;
+  summary: string | null;
+  steps: DeploymentPlanStep[] | null;
+  prerequisites: string[] | null;
+  risks: DeploymentPlanRisk[] | null;
+  estimatedDuration: string | null;
+  suggestedArtifacts: ArtifactType[] | null;
+  approvedAt: string | null;
+  approvedBy: string | null;
+  rejectionNote: string | null;
+  completedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+  action: Pick<TransformationAction, 'id' | 'title' | 'status' | 'department'>;
+  user: Pick<User, 'id' | 'firstName' | 'lastName' | 'email'>;
+  artifacts?: DeploymentArtifact[];
+  _count?: { artifacts: number };
+}
+
+export interface DeploymentArtifact {
+  id: string;
+  planId: string;
+  type: ArtifactType;
+  title: string;
+  content: string;
+  metadata: unknown;
+  orderIndex: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreatePlanResponse {
+  id: string;
+  status: DeploymentPlanStatus;
+}
+
+export interface PlanActionResponse {
+  id: string;
+  status: DeploymentPlanStatus;
+}
+
+// ─── Integrations (Module 5) ─────────────────────────────
+
+export type IntegrationProvider =
+  | 'SLACK'
+  | 'GITHUB'
+  | 'ZAPIER'
+  | 'MAKE'
+  | 'N8N_CLOUD'
+  | 'NOTION'
+  | 'CUSTOM';
+
+export type IntegrationStatus = 'CONNECTED' | 'EXPIRED' | 'REVOKED' | 'ERROR';
+
+export type AuthType = 'OAUTH2' | 'API_KEY' | 'BEARER_TOKEN';
+
+export type AuditStatus = 'PENDING' | 'SUCCESS' | 'FAILED' | 'ROLLED_BACK';
+
+export interface OrgIntegration {
+  id: string;
+  organizationId: string;
+  provider: IntegrationProvider;
+  label: string | null;
+  authType: AuthType;
+  scopes: string[];
+  status: IntegrationStatus;
+  expiresAt: string | null;
+  lastUsedAt: string | null;
+  metadata: Record<string, unknown> | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ConnectionTestResult {
+  success: boolean;
+  message: string;
+  metadata?: Record<string, unknown>;
+}
+
+// ─── Deployment Sessions (Phase 4) ───────────────────────
+
+export type DeploymentSessionStatus =
+  | 'PREPARING'
+  | 'DRY_RUN'
+  | 'APPROVED'
+  | 'EXECUTING'
+  | 'COMPLETED'
+  | 'FAILED'
+  | 'ROLLED_BACK';
+
+export type DeploymentStepStatus =
+  | 'PENDING'
+  | 'DRY_RUN'
+  | 'APPROVED'
+  | 'EXECUTING'
+  | 'COMPLETED'
+  | 'FAILED'
+  | 'SKIPPED';
+
+export interface DeploymentStep {
+  id: string;
+  sessionId: string;
+  integrationId: string | null;
+  provider: IntegrationProvider;
+  action: string;
+  params: Record<string, unknown>;
+  dependsOn: string[];
+  orderIndex: number;
+  status: DeploymentStepStatus;
+  dryRunResult: Record<string, unknown> | null;
+  result: Record<string, unknown> | null;
+  error: string | null;
+  auditLogId: string | null;
+  startedAt: string | null;
+  completedAt: string | null;
+}
+
+export interface DeploymentSession {
+  id: string;
+  organizationId: string;
+  planId: string;
+  status: DeploymentSessionStatus;
+  startedAt: string | null;
+  completedAt: string | null;
+  error: string | null;
+  createdAt: string;
+  updatedAt: string;
+  steps: DeploymentStep[];
+}
+
+export interface DeploymentAuditLog {
+  id: string;
+  organizationId: string;
+  planId: string | null;
+  integrationId: string;
+  action: string;
+  provider: IntegrationProvider;
+  request: Record<string, unknown>;
+  response: Record<string, unknown> | null;
+  status: AuditStatus;
+  rollbackData: Record<string, unknown> | null;
+  executedBy: string;
+  executedAt: string;
+  rolledBackAt: string | null;
 }

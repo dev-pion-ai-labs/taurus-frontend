@@ -18,12 +18,28 @@ import {
   TrendingUp,
   TrendingDown,
   Minus,
+  Shield,
+  AlertTriangle,
+  Download,
+  CheckCircle2,
+  Clock,
+  DollarSign,
+  Calendar,
 } from 'lucide-react';
 
 import { useMe } from '@/hooks/use-user';
 import { useSessions, useStartSession } from '@/hooks/use-sessions';
 import { useOrgMembers } from '@/hooks/use-organizations';
 import { useExecutiveDashboard } from '@/hooks/use-executive-dashboard';
+import {
+  useMaturityTrend,
+  useRoadmapProgress,
+  useValueRealization,
+  useSprintVelocity,
+  useStackOverview,
+  useTeamReadiness,
+  useRiskOverview,
+} from '@/hooks/use-dashboard-analytics';
 import { useCountUp } from '@/hooks/use-count-up';
 import { formatDollar, getScoreColor, getMaturityColor } from '@/lib/format';
 import { StatusBadge } from '@/components/consultation/status-badge';
@@ -38,6 +54,22 @@ import {
 } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
 
+import {
+  AreaChart,
+  Area,
+  BarChart,
+  Bar,
+  PieChart,
+  Pie,
+  Cell,
+  XAxis,
+  YAxis,
+  Tooltip,
+  ResponsiveContainer,
+} from 'recharts';
+
+import { useAuthStore } from '@/stores/auth-store';
+import { toast } from 'sonner';
 import type { ConsultationSession, ExecutiveDashboard } from '@/types';
 
 // ---------------------------------------------------------------------------
@@ -488,6 +520,511 @@ function SessionsTable({
 // Main page
 // ---------------------------------------------------------------------------
 
+// ---------------------------------------------------------------------------
+// Dashboard Analytics (Recharts)
+// ---------------------------------------------------------------------------
+
+const CHART_COLORS = ['#7c3aed', '#2563eb', '#16a34a', '#d97706', '#dc2626', '#06b6d4'];
+
+const STATUS_CHART_COLORS: Record<string, string> = {
+  BACKLOG: '#A8A29E',
+  THIS_SPRINT: '#2563eb',
+  IN_PROGRESS: '#d97706',
+  AWAITING_APPROVAL: '#7c3aed',
+  DEPLOYED: '#16a34a',
+  VERIFIED: '#059669',
+};
+
+function ChartCard({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <div className="rounded-xl border border-[#E7E5E4] bg-white p-5">
+      <h4 className="mb-4 text-[14px] font-semibold text-[#1C1917]">{title}</h4>
+      {children}
+    </div>
+  );
+}
+
+function ChartSkeleton() {
+  return (
+    <div className="rounded-xl border border-[#E7E5E4] bg-white p-5">
+      <Skeleton className="mb-4 h-4 w-40" />
+      <div className="space-y-3">
+        <div className="flex items-end gap-2">
+          <Skeleton className="h-24 w-full rounded-lg" />
+        </div>
+        <div className="flex justify-between">
+          <Skeleton className="h-3 w-12" />
+          <Skeleton className="h-3 w-12" />
+          <Skeleton className="h-3 w-12" />
+          <Skeleton className="h-3 w-12" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ExecutiveOverviewSkeleton() {
+  return (
+    <motion.div
+      variants={itemVariants}
+      className="rounded-xl border border-[#E7E5E4] bg-white p-6"
+    >
+      <div className="grid grid-cols-1 gap-6 md:grid-cols-[auto_1fr_1fr]">
+        {/* Gauge placeholder */}
+        <div className="flex items-center gap-4">
+          <Skeleton className="h-20 w-20 rounded-full" />
+          <div className="flex flex-col gap-2">
+            <Skeleton className="h-5 w-20 rounded-full" />
+            <Skeleton className="h-4 w-28" />
+          </div>
+        </div>
+        {/* Stat cards */}
+        <div className="flex items-center gap-4">
+          <div className="flex-1 rounded-lg border border-[#E7E5E4] bg-[#FAFAF9] p-4">
+            <Skeleton className="mb-2 h-3 w-28" />
+            <Skeleton className="h-6 w-24" />
+          </div>
+          <div className="flex-1 rounded-lg border border-[#E7E5E4] bg-[#FAFAF9] p-4">
+            <Skeleton className="mb-2 h-3 w-28" />
+            <Skeleton className="h-6 w-16" />
+          </div>
+        </div>
+        {/* Department heatmap */}
+        <div className="flex flex-col gap-2">
+          <Skeleton className="h-3 w-20" />
+          <div className="space-y-2">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <div key={i} className="flex items-center gap-2">
+                <Skeleton className="h-3 w-20" />
+                <Skeleton className="h-2 flex-1 rounded-full" />
+                <Skeleton className="h-3 w-7" />
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+      {/* Recommendations skeleton */}
+      <div className="mt-6 border-t border-[#F5F5F4] pt-4">
+        <Skeleton className="mb-3 h-4 w-36" />
+        <div className="space-y-2">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <Skeleton key={i} className="h-10 w-full rounded-lg" />
+          ))}
+        </div>
+      </div>
+    </motion.div>
+  );
+}
+
+function MaturityTrendTab() {
+  const { data, isLoading } = useMaturityTrend();
+  if (isLoading) return <ChartSkeleton />;
+  if (!data?.length) return <p className="py-8 text-center text-sm text-[#78716C]">No maturity data yet. Complete a consultation to see trends.</p>;
+
+  return (
+    <ChartCard title="AI Maturity Score Over Time">
+      <ResponsiveContainer width="100%" height={220}>
+        <AreaChart data={data}>
+          <defs>
+            <linearGradient id="scoreGradient" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="5%" stopColor="#7c3aed" stopOpacity={0.15} />
+              <stop offset="95%" stopColor="#7c3aed" stopOpacity={0} />
+            </linearGradient>
+          </defs>
+          <XAxis
+            dataKey="date"
+            tickFormatter={(v) => new Date(String(v)).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+            tick={{ fontSize: 11, fill: '#78716C' }}
+            axisLine={false}
+            tickLine={false}
+          />
+          <YAxis domain={[0, 100]} tick={{ fontSize: 11, fill: '#78716C' }} axisLine={false} tickLine={false} />
+          <Tooltip
+            contentStyle={{ borderRadius: 8, border: '1px solid #E7E5E4', fontSize: 13 }}
+            labelFormatter={(v) => new Date(String(v)).toLocaleDateString()}
+            formatter={(v) => [`${v}/100`, 'Score']}
+          />
+          <Area type="monotone" dataKey="score" stroke="#7c3aed" strokeWidth={2} fill="url(#scoreGradient)" />
+        </AreaChart>
+      </ResponsiveContainer>
+    </ChartCard>
+  );
+}
+
+function RoadmapProgressTab() {
+  const { data, isLoading } = useRoadmapProgress();
+  if (isLoading) return <ChartSkeleton />;
+  if (!data) return <p className="py-8 text-center text-sm text-[#78716C]">No roadmap data yet.</p>;
+
+  const pieData = Object.entries(data.byStatus).map(([status, val]) => ({
+    name: status.replace(/_/g, ' '),
+    value: val.count,
+    color: STATUS_CHART_COLORS[status] || '#A8A29E',
+  }));
+
+  return (
+    <ChartCard title="Roadmap Progress">
+      <div className="flex flex-col items-center gap-6 lg:flex-row">
+        <ResponsiveContainer width={180} height={180}>
+          <PieChart>
+            <Pie data={pieData} dataKey="value" cx="50%" cy="50%" innerRadius={50} outerRadius={75} paddingAngle={2}>
+              {pieData.map((entry, i) => (
+                <Cell key={i} fill={entry.color} />
+              ))}
+            </Pie>
+            <Tooltip contentStyle={{ borderRadius: 8, border: '1px solid #E7E5E4', fontSize: 13 }} />
+          </PieChart>
+        </ResponsiveContainer>
+        <div className="flex-1 space-y-2">
+          <div className="text-center lg:text-left">
+            <span className="text-3xl font-bold text-[#1C1917]">{data.completionRate}%</span>
+            <span className="ml-1 text-sm text-[#78716C]">complete</span>
+          </div>
+          <p className="text-sm text-[#78716C]">
+            {data.completedActions} of {data.totalActions} actions deployed or verified
+          </p>
+          <div className="flex flex-wrap gap-2 pt-1">
+            {pieData.map((d) => (
+              <span key={d.name} className="flex items-center gap-1.5 text-xs text-[#78716C]">
+                <span className="h-2 w-2 rounded-full" style={{ backgroundColor: d.color }} />
+                {d.name}: {d.value}
+              </span>
+            ))}
+          </div>
+        </div>
+      </div>
+    </ChartCard>
+  );
+}
+
+function ValueRealizationTab() {
+  const { data, isLoading } = useValueRealization();
+  if (isLoading) return <ChartSkeleton />;
+  if (!data) return <p className="py-8 text-center text-sm text-[#78716C]">No value data yet.</p>;
+
+  return (
+    <ChartCard title="Value Realization">
+      <div className="mb-4 flex gap-6">
+        <div>
+          <p className="text-xs text-[#78716C]">Estimated</p>
+          <p className="text-lg font-bold text-[#1C1917]">{formatDollar(data.totalEstimated)}</p>
+        </div>
+        <div>
+          <p className="text-xs text-[#78716C]">Realized</p>
+          <p className="text-lg font-bold text-[#16a34a]">{formatDollar(data.totalRealized)}</p>
+        </div>
+        <div>
+          <p className="text-xs text-[#78716C]">Rate</p>
+          <p className="text-lg font-bold text-[#1C1917]">{data.realizationRate}%</p>
+        </div>
+      </div>
+      {data.timeline.length > 0 ? (
+        <ResponsiveContainer width="100%" height={180}>
+          <AreaChart data={data.timeline}>
+            <defs>
+              <linearGradient id="valueGradient" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="5%" stopColor="#16a34a" stopOpacity={0.15} />
+                <stop offset="95%" stopColor="#16a34a" stopOpacity={0} />
+              </linearGradient>
+            </defs>
+            <XAxis
+              dataKey="date"
+              tickFormatter={(v) => new Date(String(v)).toLocaleDateString(undefined, { month: 'short' })}
+              tick={{ fontSize: 11, fill: '#78716C' }}
+              axisLine={false}
+              tickLine={false}
+            />
+            <YAxis tickFormatter={(v) => formatDollar(Number(v))} tick={{ fontSize: 11, fill: '#78716C' }} axisLine={false} tickLine={false} />
+            <Tooltip contentStyle={{ borderRadius: 8, border: '1px solid #E7E5E4', fontSize: 13 }} formatter={(v) => [formatDollar(Number(v)), 'Cumulative']} />
+            <Area type="monotone" dataKey="cumulative" stroke="#16a34a" strokeWidth={2} fill="url(#valueGradient)" />
+          </AreaChart>
+        </ResponsiveContainer>
+      ) : (
+        <p className="py-4 text-center text-sm text-[#78716C]">Deploy actions to see value timeline</p>
+      )}
+    </ChartCard>
+  );
+}
+
+function SprintVelocityTab() {
+  const { data, isLoading } = useSprintVelocity();
+  if (isLoading) return <ChartSkeleton />;
+  if (!data?.sprints?.length) return <p className="py-8 text-center text-sm text-[#78716C]">No completed sprints yet.</p>;
+
+  const trendColor = data.trend === 'IMPROVING' ? '#16a34a' : data.trend === 'DECLINING' ? '#dc2626' : '#78716C';
+
+  return (
+    <ChartCard title="Sprint Velocity">
+      <div className="mb-4 flex items-center gap-4">
+        <div>
+          <p className="text-xs text-[#78716C]">Avg Velocity</p>
+          <p className="text-lg font-bold text-[#1C1917]">{data.averageVelocity} actions/sprint</p>
+        </div>
+        <span className="rounded-full px-2 py-0.5 text-xs font-medium" style={{ color: trendColor, backgroundColor: `${trendColor}15` }}>
+          {data.trend.replace(/_/g, ' ')}
+        </span>
+      </div>
+      <ResponsiveContainer width="100%" height={180}>
+        <BarChart data={data.sprints}>
+          <XAxis dataKey="sprint" tick={{ fontSize: 11, fill: '#78716C' }} axisLine={false} tickLine={false} />
+          <YAxis tick={{ fontSize: 11, fill: '#78716C' }} axisLine={false} tickLine={false} />
+          <Tooltip contentStyle={{ borderRadius: 8, border: '1px solid #E7E5E4', fontSize: 13 }} />
+          <Bar dataKey="completedActions" name="Completed" fill="#7c3aed" radius={[4, 4, 0, 0]} />
+          <Bar dataKey="totalActions" name="Total" fill="#E7E5E4" radius={[4, 4, 0, 0]} />
+        </BarChart>
+      </ResponsiveContainer>
+    </ChartCard>
+  );
+}
+
+function StackOverviewTab() {
+  const { data, isLoading } = useStackOverview();
+  if (isLoading) return <ChartSkeleton />;
+  if (!data || data.totalTools === 0) return <p className="py-8 text-center text-sm text-[#78716C]">No tools in your stack. <a href="/stack" className="text-[#7c3aed] hover:underline">Add tools</a></p>;
+
+  const pieData = Object.entries(data.byCategory).map(([cat, count], i) => ({
+    name: cat.replace(/_/g, ' '),
+    value: count,
+    color: CHART_COLORS[i % CHART_COLORS.length],
+  }));
+
+  return (
+    <ChartCard title="Stack Overview">
+      <div className="flex flex-col items-center gap-6 lg:flex-row">
+        <ResponsiveContainer width={180} height={180}>
+          <PieChart>
+            <Pie data={pieData} dataKey="value" cx="50%" cy="50%" innerRadius={50} outerRadius={75} paddingAngle={2}>
+              {pieData.map((entry, i) => (
+                <Cell key={i} fill={entry.color} />
+              ))}
+            </Pie>
+            <Tooltip contentStyle={{ borderRadius: 8, border: '1px solid #E7E5E4', fontSize: 13 }} />
+          </PieChart>
+        </ResponsiveContainer>
+        <div className="flex-1 space-y-2">
+          <div className="grid grid-cols-3 gap-3">
+            <div>
+              <p className="text-xs text-[#78716C]">Total Tools</p>
+              <p className="text-xl font-bold text-[#1C1917]">{data.totalTools}</p>
+            </div>
+            <div>
+              <p className="text-xs text-[#78716C]">Monthly</p>
+              <p className="text-xl font-bold text-[#1C1917]">{formatDollar(data.monthlySpend)}</p>
+            </div>
+            <div>
+              <p className="text-xs text-[#78716C]">Active</p>
+              <p className="text-xl font-bold text-[#16a34a]">{data.activeTools}</p>
+            </div>
+          </div>
+          <div className="flex flex-wrap gap-2 pt-1">
+            {pieData.map((d) => (
+              <span key={d.name} className="flex items-center gap-1.5 text-xs text-[#78716C]">
+                <span className="h-2 w-2 rounded-full" style={{ backgroundColor: d.color }} />
+                {d.name}: {d.value}
+              </span>
+            ))}
+          </div>
+        </div>
+      </div>
+    </ChartCard>
+  );
+}
+
+function DashboardAnalytics() {
+  const [activeTab, setActiveTab] = useState('maturity');
+
+  const tabs = [
+    { key: 'maturity', label: 'Maturity Trend' },
+    { key: 'roadmap', label: 'Roadmap' },
+    { key: 'value', label: 'Value' },
+    { key: 'velocity', label: 'Velocity' },
+    { key: 'stack', label: 'Stack' },
+  ];
+
+  return (
+    <motion.div variants={itemVariants} className="mt-4 rounded-xl border border-[#E7E5E4] bg-white p-6">
+      <div className="mb-4 flex gap-1 overflow-x-auto rounded-lg bg-[#F5F5F4] p-1">
+        {tabs.map((tab) => (
+          <button
+            key={tab.key}
+            onClick={() => setActiveTab(tab.key)}
+            className={`whitespace-nowrap rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
+              activeTab === tab.key
+                ? 'bg-white text-[#1C1917] shadow-sm'
+                : 'text-[#78716C] hover:text-[#1C1917]'
+            }`}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
+      {activeTab === 'maturity' && <MaturityTrendTab />}
+      {activeTab === 'roadmap' && <RoadmapProgressTab />}
+      {activeTab === 'value' && <ValueRealizationTab />}
+      {activeTab === 'velocity' && <SprintVelocityTab />}
+      {activeTab === 'stack' && <StackOverviewTab />}
+    </motion.div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Main Page
+// ---------------------------------------------------------------------------
+
+// ---------------------------------------------------------------------------
+// Team Readiness & Risk Overview Row
+// ---------------------------------------------------------------------------
+
+function TeamReadinessAndRiskRow() {
+  const { data: readiness } = useTeamReadiness();
+  const { data: risk } = useRiskOverview();
+  const [exporting, setExporting] = useState(false);
+
+  const handleExportPdf = async () => {
+    setExporting(true);
+    try {
+      const { accessToken } = useAuthStore.getState();
+      const res = await fetch('/api/v1/dashboard/export?format=pdf', {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
+      if (!res.ok) throw new Error('Failed to generate PDF');
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `taurus-board-report-${new Date().toISOString().slice(0, 10)}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      toast.success('Board report exported');
+    } catch {
+      toast.error('Failed to export board report');
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  const READINESS_COLORS = {
+    READY: '#16a34a',
+    DEVELOPING: '#d97706',
+    NOT_READY: '#dc2626',
+  };
+
+  return (
+    <motion.div variants={itemVariants} className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-3">
+      {/* Team Readiness */}
+      <div className="rounded-xl border border-[#E7E5E4] bg-white p-5 lg:col-span-1">
+        <div className="mb-3 flex items-center justify-between">
+          <h3 className="text-[13px] font-semibold text-[#1C1917]">Team Readiness</h3>
+          {readiness && (
+            <span className="text-[11px] text-[#78716C]">
+              {readiness.memberCount} members
+            </span>
+          )}
+        </div>
+        {readiness ? (
+          <div className="space-y-2">
+            <div className="mb-3 text-center">
+              <span className="text-3xl font-bold text-[#1C1917]">{readiness.overallReadiness}</span>
+              <span className="text-sm text-[#78716C]">/100</span>
+            </div>
+            {readiness.departments.map((d) => (
+              <div key={d.name} className="flex items-center justify-between text-[13px]">
+                <span className="text-[#44403C]">{d.name}</span>
+                <div className="flex items-center gap-2">
+                  <span className="font-medium text-[#1C1917]">{d.score}</span>
+                  <span
+                    className="rounded-full px-1.5 py-0.5 text-[10px] font-medium text-white"
+                    style={{ backgroundColor: READINESS_COLORS[d.readinessStatus] }}
+                  >
+                    {d.readinessStatus.replace('_', ' ')}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="text-sm text-[#78716C]">No readiness data yet</p>
+        )}
+      </div>
+
+      {/* Risk Overview */}
+      <div className="rounded-xl border border-[#E7E5E4] bg-white p-5 lg:col-span-1">
+        <h3 className="mb-3 text-[13px] font-semibold text-[#1C1917]">Risk Overview</h3>
+        {risk ? (
+          <div className="space-y-3">
+            <div className="mb-3 text-center">
+              <span className={`text-3xl font-bold ${
+                risk.riskScore <= 20 ? 'text-[#16a34a]' :
+                risk.riskScore <= 50 ? 'text-[#d97706]' :
+                'text-[#dc2626]'
+              }`}>{risk.riskScore}</span>
+              <span className="text-sm text-[#78716C]"> risk score</span>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <div className="flex items-center gap-2 rounded-lg bg-[#F5F5F4] px-3 py-2">
+                <AlertTriangle className="h-3.5 w-3.5 text-[#dc2626]" />
+                <div>
+                  <p className="text-xs text-[#78716C]">Blocked</p>
+                  <p className="text-sm font-semibold text-[#1C1917]">{risk.blockedActions}</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 rounded-lg bg-[#F5F5F4] px-3 py-2">
+                <Clock className="h-3.5 w-3.5 text-[#d97706]" />
+                <div>
+                  <p className="text-xs text-[#78716C]">Stalled</p>
+                  <p className="text-sm font-semibold text-[#1C1917]">{risk.stalledActions}</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 rounded-lg bg-[#F5F5F4] px-3 py-2">
+                <DollarSign className="h-3.5 w-3.5 text-[#78716C]" />
+                <div>
+                  <p className="text-xs text-[#78716C]">Untracked</p>
+                  <p className="text-sm font-semibold text-[#1C1917]">{risk.untrackedSpendTools}</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 rounded-lg bg-[#F5F5F4] px-3 py-2">
+                <Calendar className="h-3.5 w-3.5 text-[#3b82f6]" />
+                <div>
+                  <p className="text-xs text-[#78716C]">Renewals</p>
+                  <p className="text-sm font-semibold text-[#1C1917]">{risk.upcomingRenewals}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <p className="text-sm text-[#78716C]">No risk data yet</p>
+        )}
+      </div>
+
+      {/* Board Report Export */}
+      <div className="rounded-xl border border-[#E7E5E4] bg-white p-5 flex flex-col items-center justify-center gap-4 lg:col-span-1">
+        <Shield className="h-10 w-10 text-[#A8A29E]" />
+        <div className="text-center">
+          <h3 className="text-[13px] font-semibold text-[#1C1917]">Board Report</h3>
+          <p className="mt-1 text-xs text-[#78716C]">
+            Export a presentation-ready PDF with maturity scores, value metrics, and recommendations
+          </p>
+        </div>
+        <button
+          onClick={handleExportPdf}
+          disabled={exporting}
+          className="flex items-center gap-2 rounded-lg bg-[#1C1917] px-4 py-2 text-sm font-medium text-white hover:bg-[#292524] disabled:opacity-50"
+        >
+          {exporting ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : (
+            <Download className="h-4 w-4" />
+          )}
+          {exporting ? 'Generating...' : 'Export PDF'}
+        </button>
+      </div>
+    </motion.div>
+  );
+}
+
 export default function DashboardPage() {
   const router = useRouter();
   const [page, setPage] = useState(1);
@@ -537,8 +1074,29 @@ export default function DashboardPage() {
         Dashboard
       </motion.h1>
 
-      {/* AI Transformation Overview — only when data exists */}
-      {showExecOverview && <ExecutiveOverview data={execData} />}
+      {/* AI Transformation Overview */}
+      {execLoading ? (
+        <ExecutiveOverviewSkeleton />
+      ) : showExecOverview ? (
+        <ExecutiveOverview data={execData} />
+      ) : null}
+
+      {/* Analytics Section */}
+      {execLoading ? (
+        <motion.div variants={itemVariants} className="mt-4 rounded-xl border border-[#E7E5E4] bg-white p-6">
+          <div className="mb-4 flex gap-1 rounded-lg bg-[#F5F5F4] p-1">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <Skeleton key={i} className="h-8 w-24 rounded-md" />
+            ))}
+          </div>
+          <ChartSkeleton />
+        </motion.div>
+      ) : showExecOverview ? (
+        <DashboardAnalytics />
+      ) : null}
+
+      {/* Team Readiness & Risk Overview */}
+      {showExecOverview && <TeamReadinessAndRiskRow />}
 
       {/* Layout grid */}
       <div className={`grid grid-cols-1 gap-4 lg:grid-cols-[1fr_320px] ${showExecOverview ? 'mt-4' : ''}`}>
