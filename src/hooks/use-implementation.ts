@@ -9,6 +9,8 @@ import type {
   DeploymentPlanStatus,
   CreatePlanResponse,
   PlanActionResponse,
+  ChecklistUpdateResponse,
+  DeployResponse,
 } from '@/types';
 
 // ── Plans (queries) ──────────────────────────────────────
@@ -29,17 +31,32 @@ export function useImplementationPlans(filters?: {
     queryFn: () =>
       apiClient<DeploymentPlan[]>(`/implementation/plans${qs ? `?${qs}` : ''}`),
     enabled: !!accessToken,
+    refetchInterval: (query) => {
+      const plans = query.state.data;
+      // Poll while any plan is actively processing
+      if (plans?.some((p) => p.status === 'PLANNING' || p.status === 'EXECUTING'))
+        return 5000;
+      return false;
+    },
   });
 }
 
 export function useImplementationPlan(id: string | null) {
   const { accessToken } = useAuthStore();
 
-  return useQuery({
+  const query = useQuery({
     queryKey: ['implementation', 'plan', id],
     queryFn: () => apiClient<DeploymentPlan>(`/implementation/plans/${id}`),
     enabled: !!accessToken && !!id,
+    refetchInterval: (query) => {
+      const status = query.state.data?.status;
+      // Auto-poll every 3s while AI is generating
+      if (status === 'PLANNING' || status === 'EXECUTING') return 3000;
+      return false;
+    },
   });
+
+  return query;
 }
 
 export function usePlanArtifacts(planId: string | null) {
@@ -155,6 +172,50 @@ export function useDeletePlan() {
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['implementation'] });
+    },
+  });
+}
+
+export function useUpdateChecklist() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      artifactId,
+      lineIndex,
+      checked,
+    }: {
+      artifactId: string;
+      lineIndex: number;
+      checked: boolean;
+    }) =>
+      apiClient<ChecklistUpdateResponse>(
+        `/implementation/artifacts/${artifactId}/checklist`,
+        {
+          method: 'PATCH',
+          body: JSON.stringify({ lineIndex, checked }),
+        },
+      ),
+    onSuccess: (_data, { artifactId }) => {
+      queryClient.invalidateQueries({
+        queryKey: ['implementation', 'artifact', artifactId],
+      });
+      queryClient.invalidateQueries({ queryKey: ['implementation'] });
+    },
+  });
+}
+
+export function useDeployPlan() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (id: string) =>
+      apiClient<DeployResponse>(`/implementation/plans/${id}/deploy`, {
+        method: 'POST',
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['implementation'] });
+      queryClient.invalidateQueries({ queryKey: ['tracker'] });
     },
   });
 }

@@ -781,9 +781,21 @@ export interface DeploymentArtifact {
   title: string;
   content: string;
   metadata: unknown;
+  checklistState: Record<string, boolean> | null;
   orderIndex: number;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface ChecklistUpdateResponse {
+  id: string;
+  checklistState: Record<string, boolean>;
+  progress: { checked: number; total: number };
+}
+
+export interface DeployResponse {
+  id: string;
+  deployed: boolean;
 }
 
 export interface CreatePlanResponse {
@@ -794,4 +806,29 @@ export interface CreatePlanResponse {
 export interface PlanActionResponse {
   id: string;
   status: DeploymentPlanStatus;
+}
+
+// ─── Integrations ────────────────────────────────────────
+
+export type IntegrationProvider =
+  | 'SLACK'
+  | 'GOOGLE_DRIVE'
+  | 'MICROSOFT_TEAMS'
+  | 'JIRA'
+  | 'SALESFORCE'
+  | 'HUBSPOT'
+  | 'ZAPIER'
+  | 'NOTION';
+
+export type IntegrationStatus = 'CONNECTED' | 'DISCONNECTED' | 'EXPIRED' | 'ERROR';
+
+export interface IntegrationConnection {
+  id: string;
+  provider: IntegrationProvider;
+  status: IntegrationStatus;
+  externalTeamName: string | null;
+  scope: string | null;
+  connectedAt: string;
+  connectedBy: string;
+  user: { firstName: string | null; lastName: string | null; email: string };
 }

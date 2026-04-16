@@ -11,6 +11,7 @@ import {
   useRefinePlan,
   useExecutePlan,
   useDeletePlan,
+  useDeployPlan,
 } from '@/hooks/use-implementation';
 import {
   AlertTriangle,
@@ -20,6 +21,7 @@ import {
   FileText,
   Loader2,
   MessageSquare,
+  Rocket,
   Send,
   Shield,
   Trash2,
@@ -53,6 +55,7 @@ export function PlanDetail({ planId, onDeleted }: PlanDetailProps) {
   const refinePlan = useRefinePlan();
   const executePlan = useExecutePlan();
   const deletePlan = useDeletePlan();
+  const deployPlanMutation = useDeployPlan();
 
   if (isLoading) {
     return (
@@ -75,6 +78,25 @@ export function PlanDetail({ planId, onDeleted }: PlanDetailProps) {
   const canRefine = plan.status === 'PLAN_READY' || plan.status === 'DRAFT';
   const canExecute = plan.status === 'APPROVED' || plan.status === 'FAILED';
   const canDelete = plan.status === 'DRAFT' || plan.status === 'FAILED';
+
+  // Deploy readiness: plan is COMPLETED and all integration checklists are fully checked
+  const canDeploy = (() => {
+    if (plan.status !== 'COMPLETED' || !plan.artifacts) return false;
+    const checklists = plan.artifacts.filter(
+      (a) => a.type === 'INTEGRATION_CHECKLIST',
+    );
+    if (checklists.length === 0) return true; // no checklist = ready
+    return checklists.every((cl) => {
+      const lines = (cl.content ?? '').split('\n');
+      const checklistIndices = lines.reduce<number[]>((acc, line, idx) => {
+        if (/^\s*-\s*\[[ x]\]/i.test(line)) acc.push(idx);
+        return acc;
+      }, []);
+      if (checklistIndices.length === 0) return true;
+      const state = (cl.checklistState ?? {}) as Record<string, boolean>;
+      return checklistIndices.every((idx) => state[idx]);
+    });
+  })();
 
   function handleApprove() {
     approvePlan.mutate(planId, {
@@ -123,6 +145,16 @@ export function PlanDetail({ planId, onDeleted }: PlanDetailProps) {
         refetch();
       },
       onError: () => toast.error('Failed to start execution'),
+    });
+  }
+
+  function handleDeploy() {
+    deployPlanMutation.mutate(planId, {
+      onSuccess: () => {
+        toast.success('Deployed successfully — action marked as deployed');
+        refetch();
+      },
+      onError: () => toast.error('Failed to deploy — check all checklist items are complete'),
     });
   }
 
@@ -398,6 +430,22 @@ export function PlanDetail({ planId, onDeleted }: PlanDetailProps) {
               <FileText className="w-4 h-4 mr-1.5" />
             )}
             {plan.status === 'FAILED' ? 'Retry Artifacts' : 'Generate Artifacts'}
+          </Button>
+        )}
+
+        {plan.status === 'COMPLETED' && (
+          <Button
+            size="sm"
+            onClick={handleDeploy}
+            disabled={!canDeploy || deployPlanMutation.isPending}
+            className="bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50"
+          >
+            {deployPlanMutation.isPending ? (
+              <Loader2 className="w-4 h-4 mr-1.5 animate-spin" />
+            ) : (
+              <Rocket className="w-4 h-4 mr-1.5" />
+            )}
+            {canDeploy ? 'Deploy' : 'Complete Checklist to Deploy'}
           </Button>
         )}
 

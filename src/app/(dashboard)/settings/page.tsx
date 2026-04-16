@@ -6,9 +6,15 @@ import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { toast } from 'sonner';
 import { motion, type Variants } from 'framer-motion';
-import { Loader2, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Loader2, ChevronLeft, ChevronRight, ExternalLink } from 'lucide-react';
 
 import { useMe, useUpdateMe } from '@/hooks/use-user';
+import {
+  useIntegrations,
+  useGetAuthorizeUrl,
+  useDisconnectIntegration,
+  useConnectIntegration,
+} from '@/hooks/use-integrations';
 import {
   useOrganization,
   useUpdateOrg,
@@ -42,7 +48,7 @@ import {
   SelectItem,
 } from '@/components/ui/select';
 
-import type { User } from '@/types';
+import type { User, IntegrationProvider } from '@/types';
 
 // ---------------------------------------------------------------------------
 // Schemas
@@ -534,6 +540,279 @@ function OrganizationTab({ user }: { user: User }) {
 }
 
 // ---------------------------------------------------------------------------
+// Integrations Tab
+// ---------------------------------------------------------------------------
+
+const INTEGRATION_CATALOG: {
+  provider: IntegrationProvider;
+  name: string;
+  description: string;
+  category: string;
+  color: string;
+}[] = [
+  {
+    provider: 'SLACK',
+    name: 'Slack',
+    description: 'Get AI transformation updates and alerts in your Slack channels.',
+    category: 'Communication',
+    color: '#4A154B',
+  },
+  {
+    provider: 'MICROSOFT_TEAMS',
+    name: 'Microsoft Teams',
+    description: 'Receive deployment notifications and team updates in Teams.',
+    category: 'Communication',
+    color: '#5B5FC7',
+  },
+  {
+    provider: 'JIRA',
+    name: 'Jira',
+    description: 'Sync transformation actions with your Jira board automatically.',
+    category: 'Project Management',
+    color: '#0052CC',
+  },
+  {
+    provider: 'GOOGLE_DRIVE',
+    name: 'Google Drive',
+    description: 'Import documents and export reports directly to Drive.',
+    category: 'Storage',
+    color: '#0F9D58',
+  },
+  {
+    provider: 'SALESFORCE',
+    name: 'Salesforce',
+    description: 'Connect CRM data to enhance AI transformation insights.',
+    category: 'CRM',
+    color: '#00A1E0',
+  },
+  {
+    provider: 'HUBSPOT',
+    name: 'HubSpot',
+    description: 'Sync marketing and sales data for transformation analysis.',
+    category: 'CRM',
+    color: '#FF7A59',
+  },
+  {
+    provider: 'ZAPIER',
+    name: 'Zapier',
+    description: 'Connect Taurus with 5,000+ apps via automated workflows.',
+    category: 'Automation',
+    color: '#FF4A00',
+  },
+  {
+    provider: 'NOTION',
+    name: 'Notion',
+    description: 'Sync implementation plans and checklists to Notion pages.',
+    category: 'Productivity',
+    color: '#000000',
+  },
+];
+
+function IntegrationsTab() {
+  const { data: connections, isLoading } = useIntegrations();
+  const getAuthorizeUrl = useGetAuthorizeUrl();
+  const disconnectIntegration = useDisconnectIntegration();
+  const connectIntegration = useConnectIntegration();
+
+  // Check URL for OAuth callback code
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const code = params.get('code');
+    const stateParam = params.get('state');
+
+    if (code && stateParam) {
+      try {
+        const state = JSON.parse(atob(stateParam));
+        const provider = state.provider as string;
+
+        connectIntegration.mutate(
+          {
+            provider,
+            code,
+            redirectUri: `${window.location.origin}/settings?tab=integrations`,
+          },
+          {
+            onSuccess: () => {
+              toast.success(`${provider.replace(/_/g, ' ')} connected successfully`);
+              // Clean URL
+              window.history.replaceState({}, '', '/settings?tab=integrations');
+            },
+            onError: () => {
+              toast.error('Failed to connect — please try again');
+              window.history.replaceState({}, '', '/settings?tab=integrations');
+            },
+          },
+        );
+      } catch {
+        // Invalid state, ignore
+      }
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const connectedMap = new Map(
+    (connections ?? [])
+      .filter((c) => c.status === 'CONNECTED')
+      .map((c) => [c.provider, c]),
+  );
+
+  function handleConnect(provider: IntegrationProvider) {
+    const redirectUri = `${window.location.origin}/settings?tab=integrations`;
+
+    getAuthorizeUrl.mutate(
+      { provider, redirectUri },
+      {
+        onSuccess: (data) => {
+          // Redirect to OAuth provider
+          window.location.href = data.url;
+        },
+        onError: (err) => {
+          toast.error(
+            err.message || `${provider} is not configured yet — add OAuth credentials to enable.`,
+          );
+        },
+      },
+    );
+  }
+
+  function handleDisconnect(id: string, name: string) {
+    disconnectIntegration.mutate(id, {
+      onSuccess: () => toast.success(`${name} disconnected`),
+      onError: () => toast.error(`Failed to disconnect ${name}`),
+    });
+  }
+
+  return (
+    <motion.div
+      variants={containerVariants}
+      initial="hidden"
+      animate="visible"
+      className="space-y-4"
+    >
+      <motion.div variants={itemVariants}>
+        <div className="rounded-xl border border-[#E7E5E4] bg-white p-6">
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <h3 className="text-[15px] font-semibold text-[#1C1917]">
+                Integrations
+              </h3>
+              <p className="text-sm text-[#78716C] mt-1">
+                Connect your tools to streamline your AI transformation workflow.
+              </p>
+            </div>
+          </div>
+
+          {isLoading ? (
+            <div className="grid gap-3 sm:grid-cols-2">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <Skeleton key={i} className="h-32 rounded-xl" />
+              ))}
+            </div>
+          ) : (
+            <div className="grid gap-3 sm:grid-cols-2">
+              {INTEGRATION_CATALOG.map((integration) => {
+                const connected = connectedMap.get(integration.provider);
+
+                return (
+                  <motion.div
+                    key={integration.provider}
+                    variants={itemVariants}
+                    className={`flex items-start gap-4 rounded-xl border p-4 transition-colors ${
+                      connected
+                        ? 'border-emerald-200 bg-emerald-50/50'
+                        : 'border-[#E7E5E4] hover:border-[#D6D3D1]'
+                    }`}
+                  >
+                    <div
+                      className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-white text-sm font-bold"
+                      style={{ backgroundColor: integration.color }}
+                    >
+                      {integration.name.charAt(0)}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <p className="text-sm font-semibold text-[#1C1917]">
+                          {integration.name}
+                        </p>
+                        <span className="text-[10px] font-medium text-[#A8A29E] bg-[#F5F5F4] px-2 py-0.5 rounded-full">
+                          {integration.category}
+                        </span>
+                        {connected && (
+                          <span className="text-[10px] font-semibold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full">
+                            Connected
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-xs text-[#78716C] mt-1 leading-relaxed">
+                        {integration.description}
+                      </p>
+                      {connected ? (
+                        <div className="flex items-center gap-2 mt-3">
+                          {connected.externalTeamName && (
+                            <span className="text-xs text-[#57534E]">
+                              {connected.externalTeamName}
+                            </span>
+                          )}
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="h-7 text-xs rounded-full text-red-600 hover:text-red-700 hover:bg-red-50"
+                            onClick={() =>
+                              handleDisconnect(connected.id, integration.name)
+                            }
+                            disabled={disconnectIntegration.isPending}
+                          >
+                            Disconnect
+                          </Button>
+                        </div>
+                      ) : (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="mt-3 h-8 text-xs rounded-full"
+                          onClick={() => handleConnect(integration.provider)}
+                          disabled={getAuthorizeUrl.isPending}
+                        >
+                          {getAuthorizeUrl.isPending ? (
+                            <Loader2 className="w-3 h-3 mr-1.5 animate-spin" />
+                          ) : (
+                            <ExternalLink className="w-3 h-3 mr-1.5" />
+                          )}
+                          Connect
+                        </Button>
+                      )}
+                    </div>
+                  </motion.div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      </motion.div>
+
+      {/* API Access */}
+      <motion.div variants={itemVariants}>
+        <div className="rounded-xl border border-[#E7E5E4] bg-white p-6">
+          <h3 className="text-[15px] font-semibold text-[#1C1917] mb-2">
+            API Access
+          </h3>
+          <p className="text-sm text-[#78716C] mb-4">
+            Access the Taurus API to build custom integrations and automations.
+          </p>
+          <Button
+            size="sm"
+            variant="outline"
+            className="rounded-full"
+            onClick={() => toast.info('API access coming soon — contact us for early access.')}
+          >
+            Generate API Key
+          </Button>
+        </div>
+      </motion.div>
+    </motion.div>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Main page
 // ---------------------------------------------------------------------------
 
@@ -580,6 +859,7 @@ export default function SettingsPage() {
           <TabsList variant="line" className="mb-6">
             <TabsTrigger value="profile">Profile</TabsTrigger>
             <TabsTrigger value="organization">Organization</TabsTrigger>
+            <TabsTrigger value="integrations">Integrations</TabsTrigger>
           </TabsList>
         </motion.div>
 
@@ -589,6 +869,10 @@ export default function SettingsPage() {
 
         <TabsContent value="organization">
           <OrganizationTab user={user} />
+        </TabsContent>
+
+        <TabsContent value="integrations">
+          <IntegrationsTab />
         </TabsContent>
       </Tabs>
     </motion.div>
