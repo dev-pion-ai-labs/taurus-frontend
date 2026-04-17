@@ -17,6 +17,9 @@ import {
   AlertTriangle,
   Check,
   ChevronRight,
+  Circle,
+  CircleCheck,
+  CircleX,
   Clock,
   FileText,
   Loader2,
@@ -26,6 +29,7 @@ import {
   Shield,
   Trash2,
   X,
+  Zap,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import type { DeploymentPlan, DeploymentArtifact } from '@/types';
@@ -319,6 +323,100 @@ export function PlanDetail({ planId, onDeleted }: PlanDetailProps) {
                 </p>
               </div>
             ))}
+          </div>
+        </div>
+      )}
+
+      {/* Deployment Steps — what Taurus will execute at deploy time */}
+      {plan.deploymentSteps && plan.deploymentSteps.length > 0 && (
+        <div>
+          <h3 className="text-sm font-semibold text-[#1C1917] mb-1 flex items-center gap-1.5">
+            <Zap className="w-4 h-4 text-[#E11D48]" />
+            What Taurus will execute
+          </h3>
+          <p className="text-xs text-[#78716C] mb-3">
+            {plan.status === 'COMPLETED' && plan.deploymentSteps.every((s) => !s.status || s.status === 'pending')
+              ? 'These actions will run automatically when you click Deploy.'
+              : 'Execution status per step.'}
+          </p>
+          <div className="flex flex-col gap-2">
+            {plan.deploymentSteps.map((step, i) => {
+              const status = step.status ?? 'pending';
+              const badge = (() => {
+                switch (status) {
+                  case 'completed':
+                    return {
+                      icon: <CircleCheck className="w-4 h-4 text-emerald-600" />,
+                      label: 'Completed',
+                      cls: 'border-emerald-200 bg-emerald-50',
+                    };
+                  case 'failed':
+                    return {
+                      icon: <CircleX className="w-4 h-4 text-red-600" />,
+                      label: 'Failed',
+                      cls: 'border-red-200 bg-red-50',
+                    };
+                  case 'executing':
+                    return {
+                      icon: <Loader2 className="w-4 h-4 animate-spin text-blue-600" />,
+                      label: 'Executing…',
+                      cls: 'border-blue-200 bg-blue-50',
+                    };
+                  case 'skipped':
+                    return {
+                      icon: <Circle className="w-4 h-4 text-[#A8A29E]" />,
+                      label: 'Skipped',
+                      cls: 'border-[#E7E5E4] bg-[#F5F5F4] opacity-70',
+                    };
+                  default:
+                    return {
+                      icon: <Circle className="w-4 h-4 text-[#A8A29E]" />,
+                      label: 'Pending',
+                      cls: 'border-[#E7E5E4] bg-white',
+                    };
+                }
+              })();
+
+              return (
+                <div
+                  key={i}
+                  className={`rounded-lg border p-3 ${badge.cls}`}
+                >
+                  <div className="flex items-start gap-2">
+                    <span className="mt-0.5 shrink-0">{badge.icon}</span>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-xs font-semibold uppercase tracking-wide text-[#57534E]">
+                          {step.provider}
+                        </span>
+                        <span className="text-[10px] font-mono text-[#A8A29E]">
+                          {step.tool}
+                        </span>
+                        <span className="ml-auto text-[10px] font-medium text-[#57534E]">
+                          {badge.label}
+                        </span>
+                      </div>
+                      {step.description && (
+                        <p className="text-sm text-[#1C1917] mt-1">
+                          {step.description}
+                        </p>
+                      )}
+                      {step.error && (
+                        <p className="text-xs text-red-700 mt-1.5 font-mono break-all">
+                          {step.error}
+                        </p>
+                      )}
+                      {step.dependsOn && step.dependsOn.length > 0 && (
+                        <p className="text-[10px] text-[#A8A29E] mt-1">
+                          Depends on step{step.dependsOn.length > 1 ? 's' : ''}{' '}
+                          {step.dependsOn.map((d) => d + 1).join(', ')}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </div>
       )}

@@ -749,6 +749,27 @@ export interface DeploymentPlanRisk {
   severity: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
 }
 
+export type DeploymentStepStatus =
+  | 'pending'
+  | 'executing'
+  | 'completed'
+  | 'failed'
+  | 'skipped';
+
+export interface DeploymentStepPlan {
+  provider: IntegrationProvider;
+  tool: string;
+  params: Record<string, unknown>;
+  dependsOn?: number[];
+  description?: string;
+  // Runtime state — populated by the backend PlanExecutor after Deploy.
+  status?: DeploymentStepStatus;
+  result?: unknown;
+  error?: string;
+  startedAt?: string;
+  completedAt?: string;
+}
+
 export interface DeploymentPlan {
   id: string;
   organizationId: string;
@@ -762,6 +783,7 @@ export interface DeploymentPlan {
   risks: DeploymentPlanRisk[] | null;
   estimatedDuration: string | null;
   suggestedArtifacts: ArtifactType[] | null;
+  deploymentSteps: DeploymentStepPlan[] | null;
   approvedAt: string | null;
   approvedBy: string | null;
   rejectionNote: string | null;

@@ -49,9 +49,14 @@ export function useImplementationPlan(id: string | null) {
     queryFn: () => apiClient<DeploymentPlan>(`/implementation/plans/${id}`),
     enabled: !!accessToken && !!id,
     refetchInterval: (query) => {
-      const status = query.state.data?.status;
+      const plan = query.state.data;
+      const status = plan?.status;
       // Auto-poll every 3s while AI is generating
       if (status === 'PLANNING' || status === 'EXECUTING') return 3000;
+      // Also poll while deploymentSteps are mid-execution (post-Deploy executor)
+      if (plan?.deploymentSteps?.some((s) => s.status === 'executing')) {
+        return 3000;
+      }
       return false;
     },
   });
