@@ -32,7 +32,7 @@ import {
   Zap,
 } from 'lucide-react';
 import { toast } from 'sonner';
-import type { DeploymentPlan, DeploymentArtifact } from '@/types';
+import type { DeploymentPlan } from '@/types';
 
 interface PlanDetailProps {
   planId: string;
@@ -51,8 +51,11 @@ export function PlanDetail({ planId, onDeleted }: PlanDetailProps) {
   const [refineMessage, setRefineMessage] = useState('');
   const [rejectNote, setRejectNote] = useState('');
   const [showReject, setShowReject] = useState(false);
-  const [selectedArtifact, setSelectedArtifact] =
-    useState<DeploymentArtifact | null>(null);
+  // Keep only the selected artifact's ID in local state so that when the plan
+  // refetches after a checklist toggle, the viewer receives the fresh artifact
+  // (previously holding the whole object meant ArtifactViewer saw stale
+  // checklistState until the user navigated back and re-opened).
+  const [selectedArtifactId, setSelectedArtifactId] = useState<string | null>(null);
 
   const approvePlan = useApprovePlan();
   const rejectPlan = useRejectPlan();
@@ -172,11 +175,14 @@ export function PlanDetail({ planId, onDeleted }: PlanDetailProps) {
     });
   }
 
+  const selectedArtifact =
+    plan.artifacts?.find((a) => a.id === selectedArtifactId) ?? null;
+
   if (selectedArtifact) {
     return (
       <ArtifactViewer
         artifact={selectedArtifact}
-        onBack={() => setSelectedArtifact(null)}
+        onBack={() => setSelectedArtifactId(null)}
       />
     );
   }
@@ -432,7 +438,7 @@ export function PlanDetail({ planId, onDeleted }: PlanDetailProps) {
             {plan.artifacts.map((artifact) => (
               <button
                 key={artifact.id}
-                onClick={() => setSelectedArtifact(artifact)}
+                onClick={() => setSelectedArtifactId(artifact.id)}
                 className="flex items-center gap-3 rounded-lg border border-[#E7E5E4] p-3 text-left hover:border-[#D6D3D1] transition-colors"
               >
                 <FileText className="w-5 h-5 text-[#E11D48] shrink-0" />
