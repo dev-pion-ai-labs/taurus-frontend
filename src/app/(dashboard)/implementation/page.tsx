@@ -2,13 +2,15 @@
 
 import { useState } from 'react';
 import { useImplementationPlans } from '@/hooks/use-implementation';
+import { useTrackerBoard } from '@/hooks/use-tracker';
 import { PlanList } from '@/components/implementation/plan-list';
 import { PlanDetail } from '@/components/implementation/plan-detail';
+import { CreatePlanDialog } from '@/components/implementation/create-plan-dialog';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
-import { Rocket, RefreshCw } from 'lucide-react';
+import { Rocket, RefreshCw, Plus } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
-import type { DeploymentPlan, DeploymentPlanStatus } from '@/types';
+import type { DeploymentPlan, DeploymentPlanStatus, TransformationAction } from '@/types';
 
 const STATUS_FILTERS: { label: string; value: DeploymentPlanStatus | undefined }[] = [
   { label: 'All', value: undefined },
@@ -25,11 +27,21 @@ export default function ImplementationPage() {
     DeploymentPlanStatus | undefined
   >(undefined);
   const [selectedPlanId, setSelectedPlanId] = useState<string | null>(null);
+  const [createDialogAction, setCreateDialogAction] = useState<TransformationAction | null>(null);
   const queryClient = useQueryClient();
 
   const { data: plans, isLoading } = useImplementationPlans(
     statusFilter ? { status: statusFilter } : undefined,
   );
+  const { data: board } = useTrackerBoard();
+
+  // Get actions that don't already have plans
+  const planActionIds = new Set((plans ?? []).map((p) => p.actionId));
+  const availableActions = board
+    ? Object.values(board.columns)
+        .flat()
+        .filter((a) => !planActionIds.has(a.id))
+    : [];
 
   function handleSelectPlan(plan: DeploymentPlan) {
     setSelectedPlanId(plan.id);
@@ -53,10 +65,41 @@ export default function ImplementationPage() {
             Implementation Engine
           </h1>
         </div>
-        <Button variant="outline" size="sm" onClick={handleRefresh}>
-          <RefreshCw className="w-4 h-4 mr-1.5" />
-          Refresh
-        </Button>
+        <div className="flex items-center gap-2">
+          {availableActions.length > 0 && (
+            <div className="relative group">
+              <Button size="sm">
+                <Plus className="w-4 h-4 mr-1.5" />
+                Create Plan
+              </Button>
+              <div className="absolute right-0 top-full mt-1 w-80 bg-white rounded-xl border border-[#E7E5E4] shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50 max-h-64 overflow-y-auto">
+                <div className="p-2">
+                  <p className="text-[10px] uppercase tracking-wide text-[#A8A29E] font-medium px-2 py-1">
+                    Select an action
+                  </p>
+                  {availableActions.map((action) => (
+                    <button
+                      key={action.id}
+                      onClick={() => setCreateDialogAction(action)}
+                      className="w-full text-left px-3 py-2 rounded-lg hover:bg-[#F5F5F4] transition-colors"
+                    >
+                      <p className="text-sm font-medium text-[#1C1917] truncate">
+                        {action.title}
+                      </p>
+                      <p className="text-xs text-[#A8A29E]">
+                        {action.department ?? 'No department'} · {action.category}
+                      </p>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+          <Button variant="outline" size="sm" onClick={handleRefresh}>
+            <RefreshCw className="w-4 h-4 mr-1.5" />
+            Refresh
+          </Button>
+        </div>
       </div>
 
       {/* Status filters */}
@@ -121,6 +164,19 @@ export default function ImplementationPage() {
             )}
           </div>
         </div>
+      )}
+
+      {createDialogAction && (
+        <CreatePlanDialog
+          open={!!createDialogAction}
+          onClose={() => setCreateDialogAction(null)}
+          actionId={createDialogAction.id}
+          actionTitle={createDialogAction.title}
+          onCreated={(planId) => {
+            setSelectedPlanId(planId);
+            setCreateDialogAction(null);
+          }}
+        />
       )}
     </div>
   );

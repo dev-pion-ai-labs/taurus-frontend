@@ -3,99 +3,72 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api';
 import { useAuthStore } from '@/stores/auth-store';
-import type {
-  OrgIntegration,
-  ConnectionTestResult,
-  DeploymentAuditLog,
-  IntegrationProvider,
-} from '@/types';
+import type { IntegrationConnection, IntegrationProvider } from '@/types';
 
-// ── Queries ──────────────────────────────────────────────
-
-export function useIntegrations(orgId: string | undefined) {
+export function useIntegrations() {
   const { accessToken } = useAuthStore();
 
   return useQuery({
-    queryKey: ['integrations', orgId],
-    queryFn: () =>
-      apiClient<OrgIntegration[]>(
-        `/organizations/${orgId}/integrations`,
-      ),
-    enabled: !!accessToken && !!orgId,
+    queryKey: ['integrations'],
+    queryFn: () => apiClient<IntegrationConnection[]>('/integrations'),
+    enabled: !!accessToken,
   });
 }
 
-export function useIntegrationAuditLogs(orgId: string | undefined) {
-  const { accessToken } = useAuthStore();
-
-  return useQuery({
-    queryKey: ['integrations', 'audit-logs', orgId],
-    queryFn: () =>
-      apiClient<DeploymentAuditLog[]>(
-        `/organizations/${orgId}/integrations/audit-logs`,
-      ),
-    enabled: !!accessToken && !!orgId,
-  });
-}
-
-// ── Mutations ────────────────────────────────────────────
-
-export function useTestConnection(orgId: string | undefined) {
+export function useConnectIntegration() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (integrationId: string) =>
-      apiClient<ConnectionTestResult>(
-        `/organizations/${orgId}/integrations/${integrationId}/test`,
-        { method: 'POST' },
+    mutationFn: ({
+      provider,
+      code,
+      redirectUri,
+    }: {
+      provider: string;
+      code: string;
+      redirectUri?: string;
+    }) =>
+      apiClient<IntegrationConnection>(
+        `/integrations/${provider.toLowerCase().replace(/_/g, '-')}/callback`,
+        {
+          method: 'POST',
+          body: JSON.stringify({ code, redirectUri }),
+        },
       ),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['integrations', orgId] });
+      queryClient.invalidateQueries({ queryKey: ['integrations'] });
     },
   });
 }
 
-export function useDisconnectIntegration(orgId: string | undefined) {
+export function useGetAuthorizeUrl() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (integrationId: string) =>
-      apiClient<{ revoked: boolean }>(
-        `/organizations/${orgId}/integrations/${integrationId}`,
+    mutationFn: ({
+      provider,
+      redirectUri,
+    }: {
+      provider: string;
+      redirectUri: string;
+    }) =>
+      apiClient<{ url: string }>(
+        `/integrations/${provider.toLowerCase().replace(/_/g, '-')}/authorize?redirectUri=${encodeURIComponent(redirectUri)}`,
+      ),
+  });
+}
+
+export function useDisconnectIntegration() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (id: string) =>
+      apiClient<{ id: string; disconnected: boolean }>(
+        `/integrations/${id}`,
         { method: 'DELETE' },
       ),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['integrations', orgId] });
+      queryClient.invalidateQueries({ queryKey: ['integrations'] });
     },
   });
-}
-
-export function useConnectApiKey(orgId: string | undefined) {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: (data: {
-      provider: IntegrationProvider;
-      apiKey: string;
-      label?: string;
-      scopes?: string[];
-    }) =>
-      apiClient<OrgIntegration>(
-        `/organizations/${orgId}/integrations/connect-api-key`,
-        { method: 'POST', body: JSON.stringify(data) },
-      ),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['integrations', orgId] });
-    },
-  });
-}
-
-// ── Helpers ──────────────────────────────────────────────
-
-/**
- * Build the OAuth redirect URL.
- * The backend handles the redirect to the provider's consent screen.
- */
-export function getOAuthConnectUrl(orgId: string, provider: IntegrationProvider): string {
-  return `/api/v1/organizations/${orgId}/integrations/connect/${provider.toLowerCase()}`;
 }

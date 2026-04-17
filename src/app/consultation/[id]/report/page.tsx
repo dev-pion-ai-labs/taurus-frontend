@@ -23,6 +23,7 @@ import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { useReport, useRegenerateReport } from '@/hooks/use-report';
 import { useExecutiveDashboard } from '@/hooks/use-executive-dashboard';
+import { useImportFromReport } from '@/hooks/use-tracker';
 import { useCountUp } from '@/hooks/use-count-up';
 import {
   formatDollar,
@@ -1007,6 +1008,7 @@ function LoadingSkeleton() {
 function CompletedReport({ report }: { report: TransformationReport }) {
   const reportRef = useRef<HTMLDivElement>(null);
   const { data: dashboard, isLoading: dashboardLoading } = useExecutiveDashboard();
+  const importFromReport = useImportFromReport();
 
   return (
     <div
@@ -1102,19 +1104,40 @@ function CompletedReport({ report }: { report: TransformationReport }) {
             initial={{ opacity: 0 }}
             whileInView={{ opacity: 1 }}
             viewport={{ once: true }}
-            className="flex flex-col items-center gap-4 border-t border-[#E7E5E4] pt-10 text-center"
+            className="flex flex-col items-center gap-5 border-t border-[#E7E5E4] pt-10 text-center"
           >
             <p className="text-[14px] text-[#78716C]">
               Ready to start your AI transformation journey?
             </p>
-            <Link href="/dashboard">
-              <Button className="h-10 rounded-full bg-[#1C1917] px-6 text-sm font-medium text-white hover:bg-[#1C1917]/90">
+            <div className="flex items-center gap-3">
+              <Button
+                className="h-10 rounded-full bg-[#E11D48] px-6 text-sm font-medium text-white hover:bg-[#E11D48]/90"
+                onClick={() => {
+                  importFromReport.mutate(report.sessionId, {
+                    onSuccess: (result) => {
+                      toast.success(
+                        `Imported ${result.imported} actions${result.skipped > 0 ? ` (${result.skipped} already existed)` : ''} — go to Tracker to manage them`,
+                      );
+                    },
+                    onError: () => toast.error('Failed to import recommendations'),
+                  });
+                }}
+                disabled={importFromReport.isPending}
+              >
                 <span className="flex items-center gap-2">
-                  Go to Dashboard
-                  <ArrowRight className="h-4 w-4" />
+                  {importFromReport.isPending ? 'Importing...' : 'Import to Tracker'}
+                  <Target className="h-4 w-4" />
                 </span>
               </Button>
-            </Link>
+              <Link href="/dashboard">
+                <Button variant="outline" className="h-10 rounded-full px-6 text-sm font-medium">
+                  <span className="flex items-center gap-2">
+                    Go to Dashboard
+                    <ArrowRight className="h-4 w-4" />
+                  </span>
+                </Button>
+              </Link>
+            </div>
           </motion.div>
         </div>
       </div>

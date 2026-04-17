@@ -749,6 +749,27 @@ export interface DeploymentPlanRisk {
   severity: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
 }
 
+export type DeploymentStepStatus =
+  | 'pending'
+  | 'executing'
+  | 'completed'
+  | 'failed'
+  | 'skipped';
+
+export interface DeploymentStepPlan {
+  provider: IntegrationProvider;
+  tool: string;
+  params: Record<string, unknown>;
+  dependsOn?: number[];
+  description?: string;
+  // Runtime state — populated by the backend PlanExecutor after Deploy.
+  status?: DeploymentStepStatus;
+  result?: unknown;
+  error?: string;
+  startedAt?: string;
+  completedAt?: string;
+}
+
 export interface DeploymentPlan {
   id: string;
   organizationId: string;
@@ -762,6 +783,7 @@ export interface DeploymentPlan {
   risks: DeploymentPlanRisk[] | null;
   estimatedDuration: string | null;
   suggestedArtifacts: ArtifactType[] | null;
+  deploymentSteps: DeploymentStepPlan[] | null;
   approvedAt: string | null;
   approvedBy: string | null;
   rejectionNote: string | null;
@@ -781,9 +803,21 @@ export interface DeploymentArtifact {
   title: string;
   content: string;
   metadata: unknown;
+  checklistState: Record<string, boolean> | null;
   orderIndex: number;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface ChecklistUpdateResponse {
+  id: string;
+  checklistState: Record<string, boolean>;
+  progress: { checked: number; total: number };
+}
+
+export interface DeployResponse {
+  id: string;
+  deployed: boolean;
 }
 
 export interface CreatePlanResponse {
@@ -796,107 +830,27 @@ export interface PlanActionResponse {
   status: DeploymentPlanStatus;
 }
 
-// ─── Integrations (Module 5) ─────────────────────────────
+// ─── Integrations ────────────────────────────────────────
 
 export type IntegrationProvider =
   | 'SLACK'
-  | 'GITHUB'
+  | 'GOOGLE_DRIVE'
+  | 'MICROSOFT_TEAMS'
+  | 'JIRA'
+  | 'SALESFORCE'
+  | 'HUBSPOT'
   | 'ZAPIER'
-  | 'MAKE'
-  | 'N8N_CLOUD'
-  | 'NOTION'
-  | 'CUSTOM';
+  | 'NOTION';
 
-export type IntegrationStatus = 'CONNECTED' | 'EXPIRED' | 'REVOKED' | 'ERROR';
+export type IntegrationStatus = 'CONNECTED' | 'DISCONNECTED' | 'EXPIRED' | 'ERROR';
 
-export type AuthType = 'OAUTH2' | 'API_KEY' | 'BEARER_TOKEN';
-
-export type AuditStatus = 'PENDING' | 'SUCCESS' | 'FAILED' | 'ROLLED_BACK';
-
-export interface OrgIntegration {
+export interface IntegrationConnection {
   id: string;
-  organizationId: string;
   provider: IntegrationProvider;
-  label: string | null;
-  authType: AuthType;
-  scopes: string[];
   status: IntegrationStatus;
-  expiresAt: string | null;
-  lastUsedAt: string | null;
-  metadata: Record<string, unknown> | null;
-  createdAt: string;
-  updatedAt: string;
-}
-
-export interface ConnectionTestResult {
-  success: boolean;
-  message: string;
-  metadata?: Record<string, unknown>;
-}
-
-// ─── Deployment Sessions (Phase 4) ───────────────────────
-
-export type DeploymentSessionStatus =
-  | 'PREPARING'
-  | 'DRY_RUN'
-  | 'APPROVED'
-  | 'EXECUTING'
-  | 'COMPLETED'
-  | 'FAILED'
-  | 'ROLLED_BACK';
-
-export type DeploymentStepStatus =
-  | 'PENDING'
-  | 'DRY_RUN'
-  | 'APPROVED'
-  | 'EXECUTING'
-  | 'COMPLETED'
-  | 'FAILED'
-  | 'SKIPPED';
-
-export interface DeploymentStep {
-  id: string;
-  sessionId: string;
-  integrationId: string | null;
-  provider: IntegrationProvider;
-  action: string;
-  params: Record<string, unknown>;
-  dependsOn: string[];
-  orderIndex: number;
-  status: DeploymentStepStatus;
-  dryRunResult: Record<string, unknown> | null;
-  result: Record<string, unknown> | null;
-  error: string | null;
-  auditLogId: string | null;
-  startedAt: string | null;
-  completedAt: string | null;
-}
-
-export interface DeploymentSession {
-  id: string;
-  organizationId: string;
-  planId: string;
-  status: DeploymentSessionStatus;
-  startedAt: string | null;
-  completedAt: string | null;
-  error: string | null;
-  createdAt: string;
-  updatedAt: string;
-  steps: DeploymentStep[];
-}
-
-export interface DeploymentAuditLog {
-  id: string;
-  organizationId: string;
-  planId: string | null;
-  integrationId: string;
-  action: string;
-  provider: IntegrationProvider;
-  request: Record<string, unknown>;
-  response: Record<string, unknown> | null;
-  status: AuditStatus;
-  rollbackData: Record<string, unknown> | null;
-  executedBy: string;
-  executedAt: string;
-  rolledBackAt: string | null;
+  externalTeamName: string | null;
+  scope: string | null;
+  connectedAt: string;
+  connectedBy: string;
+  user: { firstName: string | null; lastName: string | null; email: string };
 }
