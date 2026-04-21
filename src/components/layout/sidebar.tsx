@@ -4,7 +4,6 @@ import { usePathname } from 'next/navigation';
 import Link from 'next/link';
 import {
   LayoutDashboard,
-  ClipboardList,
   Building2,
   Network,
   KanbanSquare,
@@ -34,7 +33,6 @@ interface NavItem {
 
 const navItems: NavItem[] = [
   { label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
-  { label: 'Consultations', href: '/dashboard#sessions', icon: ClipboardList },
   { label: 'Company Profile', href: '/company-profile', icon: Building2 },
   { label: 'Departments', href: '/departments', icon: Network },
   { label: 'Tracker', href: '/tracker', icon: KanbanSquare },
@@ -50,7 +48,6 @@ export function Sidebar({ isOpen, onToggle }: SidebarProps) {
   const logout = useLogout();
 
   const isActive = (href: string) => {
-    if (href === '/dashboard#sessions') return false;
     return pathname === href || pathname.startsWith(href + '/');
   };
 
