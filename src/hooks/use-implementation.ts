@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api';
 import { useAuthStore } from '@/stores/auth-store';
@@ -43,6 +44,7 @@ export function useImplementationPlans(filters?: {
 
 export function useImplementationPlan(id: string | null) {
   const { accessToken } = useAuthStore();
+  const queryClient = useQueryClient();
 
   const query = useQuery({
     queryKey: ['implementation', 'plan', id],
@@ -60,6 +62,22 @@ export function useImplementationPlan(id: string | null) {
       return false;
     },
   });
+
+  // When the plan transitions out of EXECUTING into a terminal state, the
+  // tracker action status has also just changed server-side (AWAITING_APPROVAL
+  // → IN_PROGRESS → DEPLOYED). Invalidate ['tracker'] so any open Kanban or
+  // stats view picks up the new state without a manual refresh.
+  const prevStatusRef = useRef<DeploymentPlanStatus | null>(null);
+  useEffect(() => {
+    const status = query.data?.status ?? null;
+    if (
+      prevStatusRef.current === 'EXECUTING' &&
+      (status === 'COMPLETED' || status === 'FAILED')
+    ) {
+      queryClient.invalidateQueries({ queryKey: ['tracker'] });
+    }
+    prevStatusRef.current = status;
+  }, [query.data?.status, queryClient]);
 
   return query;
 }

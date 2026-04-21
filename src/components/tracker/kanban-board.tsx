@@ -190,6 +190,12 @@ export function KanbanBoard({ columns: serverColumns, onCardClick, onCardUpdate 
   // Ref to read localColumns in handleDragEnd without stale closure
   const localColumnsRef = useRef(localColumns);
   localColumnsRef.current = localColumns;
+  // Guard ref: dragOver fires on every pointer move even when the hover
+  // target hasn't changed. Re-running setState on every move triggers a
+  // full board re-render → dnd-kit re-measures → emits more events. The
+  // positive feedback loop is what makes the drag feel stuttery. Bail out
+  // when the resolved (activeId, overId) pair is unchanged from last call.
+  const lastHoverRef = useRef<string | null>(null);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
@@ -212,6 +218,7 @@ export function KanbanBoard({ columns: serverColumns, onCardClick, onCardUpdate 
   const handleDragStart = useCallback((event: DragStartEvent) => {
     const id = event.active.id as string;
     setActiveId(id);
+    lastHoverRef.current = null;
     const col = findColumnOfCard(serverColumns, id);
     if (col) {
       const idx = serverColumns[col].findIndex((a) => a.id === id);
@@ -225,6 +232,13 @@ export function KanbanBoard({ columns: serverColumns, onCardClick, onCardUpdate 
 
     const activeCardId = active.id as string;
     const overId = over.id as string;
+
+    // Cheap early-out: if we're hovering over the same target as the last
+    // event, no state change is needed. This is THE smoothness fix — the
+    // dnd-kit pointer sensor fires dragOver continuously during a drag.
+    const hoverKey = `${activeCardId}::${overId}`;
+    if (lastHoverRef.current === hoverKey) return;
+    lastHoverRef.current = hoverKey;
 
     setLocalColumns((prev) => {
       const fromCol = findColumnOfCard(prev, activeCardId);
@@ -273,6 +287,7 @@ export function KanbanBoard({ columns: serverColumns, onCardClick, onCardUpdate 
     const origin = dragOrigin.current;
     dragOrigin.current = null;
     setActiveId(null);
+    lastHoverRef.current = null;
 
     if (!over || !origin) return;
 

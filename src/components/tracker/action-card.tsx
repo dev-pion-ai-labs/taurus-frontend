@@ -174,8 +174,12 @@ export const ActionCard = memo(function ActionCard({ action, onClick, onUpdate }
     isDragging,
   } = useSortable({ id: action.id });
 
+  // CSS.Translate (translate-only) is cheaper than CSS.Transform (translate +
+  // scale). Since kanban cards don't scale during sort, the scale matrix is
+  // always identity — using Translate avoids unnecessary matrix math and
+  // subpixel jitter on GPU rasterisation.
   const style = {
-    transform: CSS.Transform.toString(transform),
+    transform: CSS.Translate.toString(transform),
     transition: transition || undefined,
     willChange: isDragging ? 'transform' : undefined,
   };
