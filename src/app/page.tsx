@@ -29,6 +29,7 @@ import {
   TrendingUp,
   LayoutDashboard,
 } from 'lucide-react';
+import { HeaderAuthActions } from '@/components/shared/header-auth-actions';
 
 /* ------------------------------------------------------------------ */
 /*  Animation variants                                                 */
@@ -274,23 +275,7 @@ export default function HomePage() {
           </div>
 
           {/* Right actions */}
-          <div className="flex items-center gap-3">
-            <Link
-              href="/login"
-              className="hidden sm:inline-flex items-center justify-center h-9 px-4 text-sm font-medium border rounded-lg transition-all hover:bg-[#F5F5F4]"
-              style={{ color: '#1C1917', borderColor: '#E7E5E4' }}
-            >
-              Login
-            </Link>
-            <Link
-              href="/login"
-              className="inline-flex items-center justify-center h-9 px-5 text-sm font-medium text-white rounded-full transition-all hover:-translate-y-0.5 hover:shadow-md"
-              style={{ backgroundColor: '#1C1917' }}
-            >
-              Start for free
-              <ArrowRight className="ml-1.5 w-3.5 h-3.5" />
-            </Link>
-          </div>
+          <HeaderAuthActions />
         </div>
       </nav>
 
