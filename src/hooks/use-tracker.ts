@@ -300,6 +300,35 @@ export function useSuggestSprint() {
   });
 }
 
+// ── AI Next-Action Suggestion ────────────────────────────
+
+export interface NextActionSuggestionResponse {
+  suggestion: {
+    action: {
+      id: string;
+      title: string;
+      description: string | null;
+      department: string | null;
+      priority: string;
+      estimatedValue: number | null;
+      estimatedEffort: string | null;
+      phase: number | null;
+      status: ActionStatus;
+    };
+    reason: string;
+  } | null;
+  message?: string;
+}
+
+export function useSuggestNextAction() {
+  return useMutation({
+    mutationFn: () =>
+      apiClient<NextActionSuggestionResponse>(
+        '/tracker/next-action/suggest',
+      ),
+  });
+}
+
 export function useAddComment() {
   const queryClient = useQueryClient();
 

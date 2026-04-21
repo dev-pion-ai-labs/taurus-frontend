@@ -1107,26 +1107,40 @@ function CompletedReport({ report }: { report: TransformationReport }) {
             className="flex flex-col items-center gap-5 border-t border-[#E7E5E4] pt-10 text-center"
           >
             <p className="text-[14px] text-[#78716C]">
-              Ready to start your AI transformation journey?
+              Your recommendations have already been added to the Tracker — jump
+              in and start shipping.
             </p>
             <div className="flex items-center gap-3">
+              <Link href="/tracker">
+                <Button className="h-10 rounded-full bg-[#E11D48] px-6 text-sm font-medium text-white hover:bg-[#E11D48]/90">
+                  <span className="flex items-center gap-2">
+                    Go to Tracker
+                    <Target className="h-4 w-4" />
+                  </span>
+                </Button>
+              </Link>
               <Button
-                className="h-10 rounded-full bg-[#E11D48] px-6 text-sm font-medium text-white hover:bg-[#E11D48]/90"
+                variant="outline"
+                className="h-10 rounded-full px-6 text-sm font-medium"
                 onClick={() => {
                   importFromReport.mutate(report.sessionId, {
                     onSuccess: (result) => {
-                      toast.success(
-                        `Imported ${result.imported} actions${result.skipped > 0 ? ` (${result.skipped} already existed)` : ''} — go to Tracker to manage them`,
-                      );
+                      if (result.imported === 0) {
+                        toast.info('Actions already imported — nothing new to add');
+                      } else {
+                        toast.success(
+                          `Re-imported ${result.imported} action${result.imported === 1 ? '' : 's'}`,
+                        );
+                      }
                     },
-                    onError: () => toast.error('Failed to import recommendations'),
+                    onError: () => toast.error('Failed to re-import recommendations'),
                   });
                 }}
                 disabled={importFromReport.isPending}
               >
                 <span className="flex items-center gap-2">
-                  {importFromReport.isPending ? 'Importing...' : 'Import to Tracker'}
-                  <Target className="h-4 w-4" />
+                  {importFromReport.isPending ? 'Re-importing...' : 'Re-import'}
+                  <ArrowRight className="h-4 w-4" />
                 </span>
               </Button>
               <Link href="/dashboard">

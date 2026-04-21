@@ -1,14 +1,14 @@
 'use client';
 
 import { useState } from 'react';
-import { useTrackerBoard, useTrackerStats, useUpdateAction, useStalledActions, useSuggestSprint } from '@/hooks/use-tracker';
+import { useTrackerBoard, useTrackerStats, useUpdateAction, useStalledActions, useSuggestSprint, useSuggestNextAction, useMoveAction } from '@/hooks/use-tracker';
 import { KanbanBoard } from '@/components/tracker/kanban-board';
 import { TrackerStatsBanner } from '@/components/tracker/tracker-stats';
 import { ActionDetailDialog } from '@/components/tracker/action-detail-dialog';
 import { ImportDialog } from '@/components/tracker/import-dialog';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Download, KanbanSquare, AlertTriangle, Sparkles, Loader2 } from 'lucide-react';
+import { Download, KanbanSquare, AlertTriangle, Sparkles, Loader2, Play, X } from 'lucide-react';
 import { toast } from 'sonner';
 import type { TransformationAction, ActionStatus } from '@/types';
 
@@ -34,7 +34,10 @@ export default function TrackerPage() {
   const { data: stats, isLoading: statsLoading } = useTrackerStats();
   const { data: stalledActions } = useStalledActions();
   const suggestSprint = useSuggestSprint();
+  const suggestNextAction = useSuggestNextAction();
+  const moveAction = useMoveAction();
   const updateAction = useUpdateAction();
+  const [dismissedSuggestionId, setDismissedSuggestionId] = useState<string | null>(null);
 
   const columns = board?.columns || EMPTY_COLUMNS;
 
@@ -51,6 +54,25 @@ export default function TrackerPage() {
     updateAction.mutate({ id, ...data });
   }
 
+  function handleStartSuggested(actionId: string) {
+    moveAction.mutate(
+      { id: actionId, status: 'IN_PROGRESS', orderIndex: 0 },
+      {
+        onSuccess: () => {
+          toast.success('Action started');
+          suggestNextAction.reset();
+        },
+        onError: () => toast.error('Failed to start action'),
+      },
+    );
+  }
+
+  const suggestedAction =
+    suggestNextAction.data?.suggestion &&
+    suggestNextAction.data.suggestion.action.id !== dismissedSuggestionId
+      ? suggestNextAction.data.suggestion
+      : null;
+
   return (
     <div className="flex flex-col h-[calc(100vh-32px)] p-6 gap-4">
       {/* Header */}
@@ -62,6 +84,29 @@ export default function TrackerPage() {
           </h1>
         </div>
         <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              setDismissedSuggestionId(null);
+              suggestNextAction.mutate(undefined, {
+                onSuccess: (data) => {
+                  if (!data.suggestion) {
+                    toast.info(data.message || 'No actions available to start');
+                  }
+                },
+                onError: () => toast.error('Failed to suggest next action'),
+              });
+            }}
+            disabled={suggestNextAction.isPending}
+          >
+            {suggestNextAction.isPending ? (
+              <Loader2 className="w-4 h-4 mr-1.5 animate-spin" />
+            ) : (
+              <Sparkles className="w-4 h-4 mr-1.5" />
+            )}
+            Suggest Next Action
+          </Button>
           <Button
             variant="outline"
             size="sm"
@@ -104,6 +149,57 @@ export default function TrackerPage() {
           <TrackerStatsBanner stats={stats} />
         </div>
       ) : null}
+
+      {/* AI suggested next action */}
+      {suggestedAction && (
+        <div className="shrink-0 rounded-xl border border-[#E11D48]/30 bg-gradient-to-r from-rose-50 to-orange-50 px-4 py-3">
+          <div className="flex items-start gap-3">
+            <Sparkles className="w-4 h-4 text-[#E11D48] shrink-0 mt-0.5" />
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-xs font-semibold uppercase tracking-wide text-[#E11D48]">
+                  Start this next
+                </span>
+                <span className="text-sm font-medium text-[#1C1917]">
+                  {suggestedAction.action.title}
+                </span>
+                {suggestedAction.action.department && (
+                  <span className="text-[10px] text-[#78716C] uppercase tracking-wide">
+                    · {suggestedAction.action.department}
+                  </span>
+                )}
+              </div>
+              <p className="text-xs text-[#57534E] mt-1 leading-relaxed">
+                {suggestedAction.reason}
+              </p>
+            </div>
+            <div className="flex items-center gap-1 shrink-0">
+              <Button
+                size="sm"
+                onClick={() => handleStartSuggested(suggestedAction.action.id)}
+                disabled={moveAction.isPending}
+                className="bg-[#E11D48] hover:bg-[#BE123C]"
+              >
+                {moveAction.isPending ? (
+                  <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
+                ) : (
+                  <Play className="w-3.5 h-3.5 mr-1.5" />
+                )}
+                Start Now
+              </Button>
+              <button
+                onClick={() =>
+                  setDismissedSuggestionId(suggestedAction.action.id)
+                }
+                className="p-1.5 text-[#A8A29E] hover:text-[#57534E] transition-colors"
+                aria-label="Dismiss suggestion"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Stalled Actions Alert */}
       {stalledActions && stalledActions.length > 0 && (
