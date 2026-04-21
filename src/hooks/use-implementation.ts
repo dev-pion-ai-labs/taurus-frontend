@@ -153,20 +153,6 @@ export function useRejectPlan() {
   });
 }
 
-export function useExecutePlan() {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: (id: string) =>
-      apiClient<PlanActionResponse>(`/implementation/plans/${id}/execute`, {
-        method: 'POST',
-      }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['implementation'] });
-    },
-  });
-}
-
 export function useDeletePlan() {
   const queryClient = useQueryClient();
 

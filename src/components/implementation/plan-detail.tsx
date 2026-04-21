@@ -9,13 +9,11 @@ import {
   useApprovePlan,
   useRejectPlan,
   useRefinePlan,
-  useExecutePlan,
   useDeletePlan,
   useDeployPlan,
 } from '@/hooks/use-implementation';
 import {
   AlertTriangle,
-  Check,
   ChevronRight,
   Circle,
   CircleCheck,
@@ -60,7 +58,6 @@ export function PlanDetail({ planId, onDeleted }: PlanDetailProps) {
   const approvePlan = useApprovePlan();
   const rejectPlan = useRejectPlan();
   const refinePlan = useRefinePlan();
-  const executePlan = useExecutePlan();
   const deletePlan = useDeletePlan();
   const deployPlanMutation = useDeployPlan();
 
@@ -83,32 +80,21 @@ export function PlanDetail({ planId, onDeleted }: PlanDetailProps) {
   const isProcessing = plan.status === 'PLANNING' || plan.status === 'EXECUTING';
   const canApprove = plan.status === 'PLAN_READY';
   const canRefine = plan.status === 'PLAN_READY' || plan.status === 'DRAFT';
-  const canExecute = plan.status === 'APPROVED' || plan.status === 'FAILED';
   const canDelete = plan.status === 'DRAFT' || plan.status === 'FAILED';
 
-  // Deploy readiness: plan is COMPLETED and all integration checklists are fully checked
-  const canDeploy = (() => {
-    if (plan.status !== 'COMPLETED' || !plan.artifacts) return false;
-    const checklists = plan.artifacts.filter(
-      (a) => a.type === 'INTEGRATION_CHECKLIST',
-    );
-    if (checklists.length === 0) return true; // no checklist = ready
-    return checklists.every((cl) => {
-      const lines = (cl.content ?? '').split('\n');
-      const checklistIndices = lines.reduce<number[]>((acc, line, idx) => {
-        if (/^\s*-\s*\[[ x]\]/i.test(line)) acc.push(idx);
-        return acc;
-      }, []);
-      if (checklistIndices.length === 0) return true;
-      const state = (cl.checklistState ?? {}) as Record<string, boolean>;
-      return checklistIndices.every((idx) => state[idx]);
-    });
-  })();
+  // Retry readiness: plan fully failed, or completed with some steps still
+  // pending/failed (partial failure). Executor skips already-completed steps.
+  const hasIncompleteSteps = !!plan.deploymentSteps?.some(
+    (s) => !s.status || s.status !== 'completed',
+  );
+  const canRetry =
+    plan.status === 'FAILED' ||
+    (plan.status === 'COMPLETED' && hasIncompleteSteps);
 
   function handleApprove() {
     approvePlan.mutate(planId, {
       onSuccess: () => {
-        toast.success('Plan approved — artifact generation started');
+        toast.success('Plan approved — deploying now');
         refetch();
       },
       onError: () => toast.error('Failed to approve plan'),
@@ -145,23 +131,13 @@ export function PlanDetail({ planId, onDeleted }: PlanDetailProps) {
     );
   }
 
-  function handleExecute() {
-    executePlan.mutate(planId, {
-      onSuccess: () => {
-        toast.success('Artifact generation started');
-        refetch();
-      },
-      onError: () => toast.error('Failed to start execution'),
-    });
-  }
-
-  function handleDeploy() {
+  function handleRetry() {
     deployPlanMutation.mutate(planId, {
       onSuccess: () => {
-        toast.success('Deployed successfully — action marked as deployed');
+        toast.success('Retrying failed steps');
         refetch();
       },
-      onError: () => toast.error('Failed to deploy — check all checklist items are complete'),
+      onError: () => toast.error('Nothing to retry on this plan'),
     });
   }
 
@@ -222,11 +198,11 @@ export function PlanDetail({ planId, onDeleted }: PlanDetailProps) {
             <span className="text-sm font-medium text-blue-800">
               {plan.status === 'PLANNING'
                 ? 'AI is generating your deployment plan...'
-                : 'Generating deployment artifacts...'}
+                : 'Deploying — creating Jira tickets, Slack messages, etc...'}
             </span>
           </div>
           <p className="text-xs text-blue-600 mt-1">
-            This may take a minute. Refresh to check progress.
+            This usually takes a few seconds.
           </p>
         </div>
       )}
@@ -341,8 +317,8 @@ export function PlanDetail({ planId, onDeleted }: PlanDetailProps) {
             What Taurus will execute
           </h3>
           <p className="text-xs text-[#78716C] mb-3">
-            {plan.status === 'COMPLETED' && plan.deploymentSteps.every((s) => !s.status || s.status === 'pending')
-              ? 'These actions will run automatically when you click Deploy.'
+            {plan.status === 'PLAN_READY' || plan.status === 'DRAFT'
+              ? 'These actions will run automatically when you approve the plan.'
               : 'Execution status per step.'}
           </p>
           <div className="flex flex-col gap-2">
@@ -507,9 +483,9 @@ export function PlanDetail({ planId, onDeleted }: PlanDetailProps) {
               {approvePlan.isPending ? (
                 <Loader2 className="w-4 h-4 mr-1.5 animate-spin" />
               ) : (
-                <Check className="w-4 h-4 mr-1.5" />
+                <Rocket className="w-4 h-4 mr-1.5" />
               )}
-              Approve & Generate Artifacts
+              Approve & Deploy
             </Button>
             <Button
               size="sm"
@@ -522,34 +498,19 @@ export function PlanDetail({ planId, onDeleted }: PlanDetailProps) {
           </>
         )}
 
-        {canExecute && (
+        {canRetry && (
           <Button
             size="sm"
-            onClick={handleExecute}
-            disabled={executePlan.isPending}
-          >
-            {executePlan.isPending ? (
-              <Loader2 className="w-4 h-4 mr-1.5 animate-spin" />
-            ) : (
-              <FileText className="w-4 h-4 mr-1.5" />
-            )}
-            {plan.status === 'FAILED' ? 'Retry Artifacts' : 'Generate Artifacts'}
-          </Button>
-        )}
-
-        {plan.status === 'COMPLETED' && (
-          <Button
-            size="sm"
-            onClick={handleDeploy}
-            disabled={!canDeploy || deployPlanMutation.isPending}
-            className="bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50"
+            onClick={handleRetry}
+            disabled={deployPlanMutation.isPending}
+            className="bg-amber-600 hover:bg-amber-700"
           >
             {deployPlanMutation.isPending ? (
               <Loader2 className="w-4 h-4 mr-1.5 animate-spin" />
             ) : (
               <Rocket className="w-4 h-4 mr-1.5" />
             )}
-            {canDeploy ? 'Deploy' : 'Complete Checklist to Deploy'}
+            {plan.status === 'FAILED' ? 'Retry Deployment' : 'Retry Failed Steps'}
           </Button>
         )}
 
