@@ -1,10 +1,13 @@
 'use client';
 
-import React, { useMemo } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, Check, Circle, Clock, MinusCircle } from 'lucide-react';
+import { ArrowLeft, Check, Circle, Clock, Download, Loader2, MinusCircle } from 'lucide-react';
+import { toast } from 'sonner';
+import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useSession } from '@/hooks/use-sessions';
+import { useAuthStore } from '@/stores/auth-store';
 import type { SessionQuestion } from '@/types';
 
 /* ------------------------------------------------------------------ */
@@ -323,6 +326,35 @@ export default function ReviewPage({
 }) {
   const { id } = React.use(params);
   const { data: session, isLoading, isError } = useSession(id);
+  const [exporting, setExporting] = useState(false);
+
+  const handleExport = useCallback(async () => {
+    setExporting(true);
+    try {
+      const { accessToken } = useAuthStore.getState();
+      const res = await fetch(
+        `/api/v1/consultation/sessions/${id}/review/export`,
+        { headers: { Authorization: `Bearer ${accessToken}` } },
+      );
+      if (!res.ok) throw new Error('Failed to generate PDF');
+
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `taurus-consultation-${new Date().toISOString().slice(0, 10)}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      toast.success('Consultation exported as PDF');
+    } catch (err) {
+      console.error('Consultation export failed:', err);
+      toast.error('Failed to export PDF. Please try again.');
+    } finally {
+      setExporting(false);
+    }
+  }, [id]);
 
   /* Group questions by section */
   const grouped = useMemo(() => {
@@ -391,9 +423,29 @@ export default function ReviewPage({
           <ArrowLeft className="h-4 w-4" />
           Back to Dashboard
         </Link>
-        <h1 className="text-[24px] font-semibold leading-tight text-[#1C1917]">
-          Consultation Review
-        </h1>
+        <div className="flex items-center justify-between gap-4">
+          <h1 className="text-[24px] font-semibold leading-tight text-[#1C1917]">
+            Consultation Review
+          </h1>
+          <Button
+            onClick={handleExport}
+            disabled={exporting || session.questions.length === 0}
+            variant="outline"
+            className="gap-2 rounded-full border-[#E7E5E4] bg-white px-5 text-[13px] font-medium text-[#1C1917] shadow-sm hover:bg-[#F5F5F4]"
+          >
+            {exporting ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Exporting...
+              </>
+            ) : (
+              <>
+                <Download className="h-4 w-4" />
+                Export PDF
+              </>
+            )}
+          </Button>
+        </div>
       </div>
 
       {/* Session info bar */}
