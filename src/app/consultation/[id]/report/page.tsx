@@ -18,6 +18,12 @@ import {
   Zap,
   Lightbulb,
   ArrowRight,
+  AlertCircle,
+  FileText,
+  Globe,
+  Flag,
+  ShieldCheck,
+  Info,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -44,6 +50,12 @@ import type {
   DepartmentScore,
   Recommendation,
   Phase,
+  ReportSnapshot,
+  ExecutiveBrief,
+  DecisionBlock,
+  AssumptionsAndLimitations,
+  PeerContext,
+  ValueRange,
 } from '@/types';
 
 /* ------------------------------------------------------------------ */
@@ -146,25 +158,61 @@ function ScoreGauge({ score, size = 120 }: { score: number; size?: number }) {
 /*  Stat Card with animated counter                                    */
 /* ------------------------------------------------------------------ */
 
+/**
+ * Format a low/high dollar range as a compact string, e.g. "$40M–$60M".
+ * Mirrors the backend's banding (no granularity below $1M).
+ */
+function formatDollarRange(low: number, high: number): string {
+  const fmt = (n: number) => {
+    if (n >= 1_000_000_000) return `$${(n / 1_000_000_000).toFixed(1)}B`;
+    if (n >= 1_000_000) return `$${Math.round(n / 1_000_000)}M`;
+    if (n >= 1_000) return `$${Math.round(n / 1_000)}K`;
+    return `$${n}`;
+  };
+  if (low === high) return fmt(high);
+  return `${fmt(low)}–${fmt(high)}`;
+}
+
+const CONFIDENCE_LABEL: Record<string, string> = {
+  'data-grounded': 'Data-grounded',
+  directional: 'Directional',
+  'order-of-magnitude': 'Order-of-magnitude',
+};
+
+const MATURITY_STAGE_COLOR: Record<string, string> = {
+  Early: '#9CA3AF',
+  Working: '#d97706',
+  Scaling: '#2563EB',
+  Native: '#16a34a',
+};
+
 function StatCard({
   label,
   value,
   icon: Icon,
   format = 'dollar',
   accent = false,
+  displayOverride,
 }: {
   label: string;
   value: number;
   icon: React.ElementType;
   format?: 'dollar' | 'fte';
   accent?: boolean;
+  /**
+   * If provided, renders this literal string instead of an animated numeric
+   * counter. Used to show ranges ("$40M–$60M") or bands ("50–100 FTEs")
+   * when the report carries briefing-shape data.
+   */
+  displayOverride?: string;
 }) {
   const animated = useCountUp(value, 1600, true);
 
-  const formatted =
-    format === 'dollar'
+  const formatted = displayOverride
+    ? displayOverride
+    : format === 'dollar'
       ? formatDollar(Math.round(animated))
-      : `${animated.toFixed(1)} FTEs`;
+      : `${Math.round(animated)} FTEs`;
 
   return (
     <div
@@ -241,6 +289,18 @@ function TimeframeBadge({ timeframe }: { timeframe: string }) {
 
 function HeroSection({ report }: { report: TransformationReport }) {
   const maturityColor = getMaturityColor(report.maturityLevel ?? '');
+  const brief = report.executiveBrief;
+  const hasRangedValue =
+    report.totalAiValueLow != null && report.totalAiValueHigh != null;
+  const hasBriefing = brief != null;
+
+  // Range-aware display strings (fall back to point estimates for legacy reports)
+  const totalValueDisplay = hasRangedValue
+    ? formatDollarRange(report.totalAiValueLow!, report.totalAiValueHigh!)
+    : undefined;
+  const fteDisplay = report.fteRedeployableBand
+    ? `${report.fteRedeployableBand} FTEs`
+    : undefined;
 
   return (
     <motion.section
@@ -250,19 +310,54 @@ function HeroSection({ report }: { report: TransformationReport }) {
       viewport={{ once: true, amount: 0.2 }}
     >
       <div className="mb-8 flex flex-col items-center gap-5">
-        <motion.div variants={itemVariants}>
-          <ScoreGauge score={report.overallScore ?? 0} />
-        </motion.div>
-
-        <motion.div variants={itemVariants} className="text-center">
-          <span
-            className="inline-block rounded-full px-4 py-1.5 text-[13px] font-semibold text-white"
-            style={{ backgroundColor: maturityColor }}
+        {hasBriefing ? (
+          // New: show two maturity-stage chips instead of a meaningless numeric gauge
+          <motion.div
+            variants={itemVariants}
+            className="flex flex-col items-center gap-4"
           >
-            {report.maturityLevel}
-          </span>
-          <p className="mt-2 text-[13px] text-[#78716C]">AI Maturity Level</p>
-        </motion.div>
+            <div className="flex flex-wrap items-center justify-center gap-3">
+              <MaturityChip
+                label="Portfolio"
+                stage={brief!.portfolioMaturity.stage}
+              />
+              <MaturityChip
+                label="Delivery"
+                stage={brief!.deliveryMaturity.stage}
+              />
+            </div>
+            <p className="max-w-md text-center text-[12px] text-[#78716C]">
+              Portfolio = what AI is deployed internally. Delivery = how the
+              operating model around AI functions.
+            </p>
+          </motion.div>
+        ) : (
+          <>
+            <motion.div variants={itemVariants}>
+              <ScoreGauge score={report.overallScore ?? 0} />
+            </motion.div>
+            <motion.div variants={itemVariants} className="text-center">
+              <span
+                className="inline-block rounded-full px-4 py-1.5 text-[13px] font-semibold text-white"
+                style={{ backgroundColor: maturityColor }}
+              >
+                {report.maturityLevel}
+              </span>
+              <p className="mt-2 text-[13px] text-[#78716C]">
+                AI Maturity Level
+              </p>
+            </motion.div>
+          </>
+        )}
+
+        {report.confidenceNote && (
+          <motion.div variants={itemVariants}>
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-[#E7E5E4] bg-[#F5F5F4] px-3 py-1 text-[11px] font-medium text-[#44403C]">
+              <span className="h-1.5 w-1.5 rounded-full bg-[#78716C]" />
+              {CONFIDENCE_LABEL[report.confidenceNote] ?? report.confidenceNote}
+            </span>
+          </motion.div>
+        )}
       </div>
 
       <motion.div
@@ -275,6 +370,7 @@ function HeroSection({ report }: { report: TransformationReport }) {
             value={report.totalAiValue ?? 0}
             icon={DollarSign}
             accent
+            displayOverride={totalValueDisplay}
           />
         </motion.div>
         <motion.div variants={itemVariants}>
@@ -293,12 +389,700 @@ function HeroSection({ report }: { report: TransformationReport }) {
         </motion.div>
         <motion.div variants={itemVariants}>
           <StatCard
-            label="Redeployable"
+            label="Capacity freed"
             value={report.fteRedeployable ?? 0}
             icon={Users}
             format="fte"
+            displayOverride={fteDisplay}
           />
         </motion.div>
+      </motion.div>
+    </motion.section>
+  );
+}
+
+function MaturityChip({
+  label,
+  stage,
+}: {
+  label: string;
+  stage: 'Early' | 'Working' | 'Scaling' | 'Native';
+}) {
+  const color = MATURITY_STAGE_COLOR[stage] ?? '#9CA3AF';
+  return (
+    <div className="flex flex-col items-center gap-1">
+      <span
+        className="inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-[13px] font-semibold text-white"
+        style={{ backgroundColor: color }}
+      >
+        {label}: {stage}
+      </span>
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/*  Shared briefing helpers                                            */
+/* ------------------------------------------------------------------ */
+
+function ValueRangeDisplay({
+  value,
+  compact = false,
+}: {
+  value: ValueRange;
+  compact?: boolean;
+}) {
+  return (
+    <div className={compact ? '' : 'rounded-lg border border-[#E7E5E4] bg-[#FAFAF9] p-4'}>
+      <div className="flex items-baseline gap-2">
+        <span className="text-[20px] font-bold text-[#1C1917]">
+          {formatDollarRange(value.low, value.high)}
+        </span>
+        <span className="text-[12px] font-medium text-[#78716C]">/ year</span>
+        <span className="ml-auto inline-flex items-center gap-1 rounded-full border border-[#E7E5E4] bg-white px-2 py-0.5 text-[10px] font-medium text-[#78716C]">
+          {CONFIDENCE_LABEL[value.confidenceNote] ?? value.confidenceNote}
+        </span>
+      </div>
+      {!compact && (
+        <>
+          <p className="mt-2 text-[13px] leading-relaxed text-[#44403C]">
+            <span className="font-semibold text-[#1C1917]">Logic: </span>
+            {value.logic}
+          </p>
+          {value.assumptions.length > 0 && (
+            <ul className="mt-2 space-y-1">
+              {value.assumptions.map((a, i) => (
+                <li
+                  key={i}
+                  className="pl-3 text-[12px] leading-relaxed text-[#78716C] before:mr-1.5 before:content-['•']"
+                >
+                  {a}
+                </li>
+              ))}
+            </ul>
+          )}
+        </>
+      )}
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/*  NEW Section: Snapshot Card (5-second TL;DR)                        */
+/* ------------------------------------------------------------------ */
+
+function SnapshotCard({ snapshot }: { snapshot: ReportSnapshot }) {
+  return (
+    <motion.section
+      variants={containerVariants}
+      initial="hidden"
+      whileInView="visible"
+      viewport={{ once: true, amount: 0.2 }}
+    >
+      <motion.div
+        variants={itemVariants}
+        className="relative overflow-hidden rounded-2xl border border-[#1C1917] bg-[#1C1917] p-7 text-white shadow-sm"
+      >
+        <div className="mb-4 flex items-center justify-between">
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-white/20 bg-white/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-wider text-white/80">
+            Snapshot
+          </span>
+          <span className="inline-flex items-center gap-1.5 text-[11px] font-medium text-white/60">
+            <Clock className="h-3 w-3" />
+            {snapshot.readingTime}
+          </span>
+        </div>
+
+        <h2 className="mb-3 text-[22px] font-bold leading-tight text-white">
+          {snapshot.headline}
+        </h2>
+        <p className="mb-6 text-[14px] leading-relaxed text-white/80">
+          {snapshot.bottomLine}
+        </p>
+
+        <div className="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          {snapshot.keyStats.map((stat, i) => (
+            <motion.div
+              key={i}
+              initial={{ opacity: 0, y: 8 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ delay: i * 0.08, duration: 0.4 }}
+              className="rounded-lg border border-white/10 bg-white/5 p-3"
+            >
+              <p className="mb-1 text-[10px] font-medium uppercase tracking-wider text-white/50">
+                {stat.label}
+              </p>
+              <p className="text-[15px] font-semibold text-white">{stat.value}</p>
+            </motion.div>
+          ))}
+        </div>
+
+        {snapshot.watchouts.length > 0 && (
+          <div className="mb-4 rounded-lg border border-amber-400/30 bg-amber-500/10 p-3">
+            <p className="mb-2 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-amber-200">
+              <AlertCircle className="h-3 w-3" />
+              Watchouts
+            </p>
+            <ul className="space-y-1.5">
+              {snapshot.watchouts.map((w, i) => (
+                <li
+                  key={i}
+                  className="pl-3 text-[12px] leading-relaxed text-amber-100/90 before:mr-1.5 before:content-['•']"
+                >
+                  {w}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        <div className="flex items-center gap-2 text-[11px] text-white/50">
+          <span className="inline-flex items-center gap-1.5">
+            <span className="h-1.5 w-1.5 rounded-full bg-white/40" />
+            {CONFIDENCE_LABEL[snapshot.confidenceNote] ?? snapshot.confidenceNote}
+          </span>
+        </div>
+      </motion.div>
+    </motion.section>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/*  NEW Section: Executive Brief Card                                  */
+/* ------------------------------------------------------------------ */
+
+function ExecutiveBriefCard({ brief }: { brief: ExecutiveBrief }) {
+  return (
+    <motion.section
+      variants={containerVariants}
+      initial="hidden"
+      whileInView="visible"
+      viewport={{ once: true, amount: 0.2 }}
+    >
+      <motion.h2
+        variants={itemVariants}
+        className="mb-4 text-[15px] font-semibold text-[#1C1917]"
+      >
+        Executive Brief
+      </motion.h2>
+
+      <motion.div
+        variants={itemVariants}
+        className="rounded-xl border border-[#E7E5E4] bg-white p-6"
+      >
+        <div className="mb-6 space-y-4">
+          <div>
+            <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wider text-[#78716C]">
+              Thesis
+            </p>
+            <p className="text-[16px] font-semibold leading-relaxed text-[#1C1917]">
+              {brief.thesis}
+            </p>
+          </div>
+
+          <div>
+            <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wider text-[#78716C]">
+              Big Move
+            </p>
+            <p className="text-[14px] leading-relaxed text-[#44403C]">
+              {brief.bigMove}
+            </p>
+          </div>
+        </div>
+
+        {brief.decisionsRequired.length > 0 && (
+          <div className="mb-6 rounded-lg border border-[#E7E5E4] bg-[#FAFAF9] p-4">
+            <p className="mb-3 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-[#1C1917]">
+              <Flag className="h-3.5 w-3.5" />
+              Decisions leadership must make
+            </p>
+            <ol className="space-y-2">
+              {brief.decisionsRequired.map((d, i) => (
+                <li key={i} className="flex items-start gap-2.5 text-[13px] leading-relaxed text-[#44403C]">
+                  <span className="mt-0.5 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[#1C1917] text-[10px] font-bold text-white">
+                    {i + 1}
+                  </span>
+                  <span>{d}</span>
+                </li>
+              ))}
+            </ol>
+          </div>
+        )}
+
+        <div className="mb-6">
+          <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-[#78716C]">
+            Value at stake
+          </p>
+          <ValueRangeDisplay value={brief.valueSummary} />
+        </div>
+
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <MaturityLadderCard label="Portfolio Maturity" ladder={brief.portfolioMaturity} />
+          <MaturityLadderCard label="Delivery Maturity" ladder={brief.deliveryMaturity} />
+        </div>
+      </motion.div>
+    </motion.section>
+  );
+}
+
+function MaturityLadderCard({
+  label,
+  ladder,
+}: {
+  label: string;
+  ladder: { stage: 'Early' | 'Working' | 'Scaling' | 'Native'; evidence: string; gaps: string };
+}) {
+  const color = MATURITY_STAGE_COLOR[ladder.stage] ?? '#9CA3AF';
+  const stages: Array<'Early' | 'Working' | 'Scaling' | 'Native'> = [
+    'Early',
+    'Working',
+    'Scaling',
+    'Native',
+  ];
+  const activeIdx = stages.indexOf(ladder.stage);
+
+  return (
+    <div className="rounded-lg border border-[#E7E5E4] bg-white p-4">
+      <div className="mb-3 flex items-center justify-between">
+        <p className="text-[11px] font-semibold uppercase tracking-wider text-[#78716C]">
+          {label}
+        </p>
+        <span
+          className="inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-semibold text-white"
+          style={{ backgroundColor: color }}
+        >
+          {ladder.stage}
+        </span>
+      </div>
+
+      <div className="mb-3 flex items-center gap-1">
+        {stages.map((s, i) => (
+          <div
+            key={s}
+            className="h-1.5 flex-1 rounded-full"
+            style={{
+              backgroundColor: i <= activeIdx ? color : '#E7E5E4',
+            }}
+          />
+        ))}
+      </div>
+      <div className="mb-3 flex justify-between text-[9px] font-medium uppercase tracking-wider text-[#A8A29E]">
+        {stages.map((s) => (
+          <span key={s}>{s}</span>
+        ))}
+      </div>
+
+      <div className="space-y-2.5 text-[12px] leading-relaxed">
+        <div>
+          <p className="mb-0.5 text-[10px] font-semibold uppercase tracking-wider text-[#16a34a]">
+            Evidence
+          </p>
+          <p className="text-[#44403C]">{ladder.evidence}</p>
+        </div>
+        <div>
+          <p className="mb-0.5 text-[10px] font-semibold uppercase tracking-wider text-[#dc2626]">
+            Gaps
+          </p>
+          <p className="text-[#44403C]">{ladder.gaps}</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/*  NEW Section: Decision Blocks                                       */
+/* ------------------------------------------------------------------ */
+
+function DecisionBlocksSection({ blocks }: { blocks: DecisionBlock[] }) {
+  return (
+    <motion.section
+      variants={containerVariants}
+      initial="hidden"
+      whileInView="visible"
+      viewport={{ once: true, amount: 0.2 }}
+    >
+      <motion.div variants={itemVariants} className="mb-4 flex items-end justify-between">
+        <div>
+          <h2 className="text-[15px] font-semibold text-[#1C1917]">Decision Blocks</h2>
+          <p className="mt-1 text-[12px] text-[#78716C]">
+            The 2–3 commit/not-commit choices that determine whether the thesis lands.
+          </p>
+        </div>
+        <span className="text-[11px] font-medium text-[#A8A29E]">
+          {blocks.length} {blocks.length === 1 ? 'decision' : 'decisions'}
+        </span>
+      </motion.div>
+
+      <div className="space-y-4">
+        {blocks.map((block, i) => (
+          <DecisionBlockCard key={block.id || i} block={block} index={i} />
+        ))}
+      </div>
+    </motion.section>
+  );
+}
+
+function DecisionBlockCard({ block, index }: { block: DecisionBlock; index: number }) {
+  const [expanded, setExpanded] = useState(index === 0);
+
+  return (
+    <motion.div
+      variants={itemVariants}
+      className="overflow-hidden rounded-xl border border-[#E7E5E4] bg-white"
+    >
+      <button
+        type="button"
+        onClick={() => setExpanded((v) => !v)}
+        className="flex w-full items-start justify-between gap-4 p-5 text-left transition-colors hover:bg-[#FAFAF9]"
+      >
+        <div className="flex-1">
+          <div className="mb-1.5 flex items-center gap-2">
+            <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-[#1C1917] text-[10px] font-bold text-white">
+              {index + 1}
+            </span>
+            <span className="text-[10px] font-semibold uppercase tracking-wider text-[#78716C]">
+              Decision
+            </span>
+          </div>
+          <h3 className="mb-3 text-[15px] font-semibold leading-snug text-[#1C1917]">
+            {block.decision}
+          </h3>
+          <div className="flex flex-wrap items-center gap-2 text-[11px]">
+            <span className="inline-flex items-center rounded-full bg-[#F5F5F4] px-2.5 py-0.5 font-medium text-[#44403C]">
+              {formatDollarRange(block.value.low, block.value.high)} / yr
+            </span>
+            <span className="inline-flex items-center rounded-full border border-[#E7E5E4] bg-white px-2.5 py-0.5 font-medium text-[#78716C]">
+              {CONFIDENCE_LABEL[block.value.confidenceNote] ?? block.value.confidenceNote}
+            </span>
+            <span className="inline-flex items-center gap-1 rounded-full border border-[#E7E5E4] bg-white px-2.5 py-0.5 font-medium text-[#78716C]">
+              <Users className="h-3 w-3" />
+              {block.ownership.accountableRole}
+            </span>
+          </div>
+        </div>
+        <ChevronDown
+          className={`mt-1 h-4 w-4 shrink-0 text-[#78716C] transition-transform ${expanded ? 'rotate-180' : ''}`}
+        />
+      </button>
+
+      <AnimatePresence initial={false}>
+        {expanded && (
+          <motion.div
+            variants={expandVariants}
+            initial="collapsed"
+            animate="expanded"
+            exit="collapsed"
+          >
+            <div className="space-y-6 border-t border-[#E7E5E4] p-5">
+              {/* Why now */}
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <div className="rounded-lg border border-[#E7E5E4] bg-[#FAFAF9] p-4">
+                  <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wider text-[#78716C]">
+                    Why now
+                  </p>
+                  <p className="text-[13px] leading-relaxed text-[#44403C]">
+                    {block.whyNow.urgency}
+                  </p>
+                </div>
+                <div className="rounded-lg border border-amber-200 bg-amber-50 p-4">
+                  <p className="mb-1.5 flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-amber-800">
+                    <AlertCircle className="h-3 w-3" />
+                    Cost of inaction
+                  </p>
+                  <p className="text-[13px] leading-relaxed text-amber-900">
+                    {block.whyNow.costOfInaction}
+                  </p>
+                </div>
+              </div>
+
+              {/* Value range with logic */}
+              <div>
+                <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-[#78716C]">
+                  Value + logic
+                </p>
+                <ValueRangeDisplay value={block.value} />
+              </div>
+
+              {/* Ownership */}
+              <div>
+                <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-[#78716C]">
+                  Ownership
+                </p>
+                <div className="flex flex-wrap items-center gap-2 text-[12px]">
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-[#1C1917] px-3 py-1 font-medium text-white">
+                    <ShieldCheck className="h-3 w-3" />
+                    Accountable: {block.ownership.accountableRole}
+                  </span>
+                  {block.ownership.supportingRoles.map((role, i) => (
+                    <span
+                      key={i}
+                      className="inline-flex items-center rounded-full border border-[#E7E5E4] bg-white px-3 py-1 font-medium text-[#44403C]"
+                    >
+                      Supporting: {role}
+                    </span>
+                  ))}
+                </div>
+              </div>
+
+              {/* Execution reality */}
+              <div>
+                <p className="mb-2 flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-[#78716C]">
+                  Execution reality
+                </p>
+                <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+                  {block.executionReality.map((b, i) => (
+                    <div
+                      key={i}
+                      className="rounded-lg border border-[#E7E5E4] bg-[#FAFAF9] p-3"
+                    >
+                      <p className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-[#78716C]">
+                        {b.category}
+                      </p>
+                      <p className="mb-2 text-[12px] font-semibold leading-snug text-[#1C1917]">
+                        {b.blocker}
+                      </p>
+                      <p className="text-[11px] leading-relaxed text-[#78716C]">
+                        <span className="font-semibold">Mitigation: </span>
+                        {b.mitigation}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* 90-day plan */}
+              <div>
+                <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-[#78716C]">
+                  Minimum viable 90-day plan
+                </p>
+                <p className="mb-3 text-[13px] italic leading-relaxed text-[#44403C]">
+                  {block.ninetyDayPlan.objective}
+                </p>
+                <div className="space-y-2">
+                  {block.ninetyDayPlan.actions.map((a, i) => (
+                    <div
+                      key={i}
+                      className="flex items-start gap-3 rounded-lg border border-[#E7E5E4] bg-white p-3"
+                    >
+                      <span className="mt-0.5 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[#F5F5F4] text-[10px] font-bold text-[#44403C]">
+                        {i + 1}
+                      </span>
+                      <div className="flex-1">
+                        <p className="mb-1 text-[13px] font-semibold text-[#1C1917]">{a.title}</p>
+                        <div className="flex flex-wrap items-center gap-2 text-[11px] text-[#78716C]">
+                          <span>{a.week}</span>
+                          <span>·</span>
+                          <span>{a.ownerRole}</span>
+                        </div>
+                        <p className="mt-1.5 text-[12px] leading-relaxed text-[#44403C]">
+                          <span className="font-semibold text-[#16a34a]">Success signal: </span>
+                          {a.successSignal}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Proof point */}
+              <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-4">
+                <p className="mb-1.5 flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-emerald-800">
+                  <CheckCircle2 className="h-3 w-3" />
+                  Proof point
+                </p>
+                <p className="text-[13px] leading-relaxed text-emerald-900">
+                  <span className="font-semibold">{block.proofPoint.metric}</span> should reach{' '}
+                  <span className="font-semibold">{block.proofPoint.threshold}</span> by{' '}
+                  <span className="font-semibold">{block.proofPoint.reviewBy}</span>.
+                </p>
+              </div>
+
+              {/* Dependencies + Risks */}
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                {block.dependencies.length > 0 && (
+                  <div>
+                    <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-[#78716C]">
+                      Dependencies
+                    </p>
+                    <ul className="space-y-1.5">
+                      {block.dependencies.map((d, i) => (
+                        <li
+                          key={i}
+                          className="pl-3 text-[12px] leading-relaxed text-[#44403C] before:mr-1.5 before:content-['→']"
+                        >
+                          {d}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+                {block.risksAndTradeoffs.length > 0 && (
+                  <div>
+                    <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-[#78716C]">
+                      Risks &amp; trade-offs
+                    </p>
+                    <div className="space-y-2">
+                      {block.risksAndTradeoffs.map((r, i) => (
+                        <div
+                          key={i}
+                          className="rounded-md border border-[#E7E5E4] bg-white p-2.5"
+                        >
+                          <p className="mb-0.5 text-[12px] font-semibold leading-snug text-[#1C1917]">
+                            {r.risk}
+                          </p>
+                          <p className="text-[11px] text-[#78716C]">
+                            Resistance: {r.resistanceSource} · Mitigation: {r.mitigation}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </motion.div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/*  NEW Section: Assumptions & Limitations                             */
+/* ------------------------------------------------------------------ */
+
+function AssumptionsAndLimitationsSection({
+  data,
+}: {
+  data: AssumptionsAndLimitations;
+}) {
+  return (
+    <motion.section
+      variants={containerVariants}
+      initial="hidden"
+      whileInView="visible"
+      viewport={{ once: true, amount: 0.2 }}
+    >
+      <motion.div variants={itemVariants} className="mb-4">
+        <h2 className="flex items-center gap-2 text-[15px] font-semibold text-[#1C1917]">
+          <FileText className="h-4 w-4 text-[#78716C]" />
+          Assumptions &amp; Limitations
+        </h2>
+        <p className="mt-1 text-[12px] text-[#78716C]">
+          What this analysis is based on, and what must still be validated.
+        </p>
+      </motion.div>
+
+      <motion.div
+        variants={itemVariants}
+        className="grid grid-cols-1 gap-3 sm:grid-cols-3"
+      >
+        <div className="rounded-xl border border-[#E7E5E4] bg-white p-5">
+          <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-[#78716C]">
+            Scope of input data
+          </p>
+          <p className="text-[13px] leading-relaxed text-[#44403C]">
+            {data.scopeOfInputData}
+          </p>
+        </div>
+
+        <div className="rounded-xl border border-[#E7E5E4] bg-white p-5">
+          <p className="mb-2 flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-[#78716C]">
+            <Info className="h-3 w-3" />
+            Uncertainty notes
+          </p>
+          {data.uncertaintyNotes.length > 0 ? (
+            <ul className="space-y-1.5">
+              {data.uncertaintyNotes.map((n, i) => (
+                <li
+                  key={i}
+                  className="pl-3 text-[12px] leading-relaxed text-[#44403C] before:mr-1.5 before:content-['•']"
+                >
+                  {n}
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="text-[12px] italic text-[#A8A29E]">None recorded.</p>
+          )}
+        </div>
+
+        <div className="rounded-xl border border-[#E7E5E4] bg-white p-5">
+          <p className="mb-2 flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-[#78716C]">
+            <CheckCircle2 className="h-3 w-3" />
+            Validation required
+          </p>
+          {data.validationRequired.length > 0 ? (
+            <ul className="space-y-1.5">
+              {data.validationRequired.map((v, i) => (
+                <li
+                  key={i}
+                  className="pl-3 text-[12px] leading-relaxed text-[#44403C] before:mr-1.5 before:content-['•']"
+                >
+                  {v}
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="text-[12px] italic text-[#A8A29E]">None recorded.</p>
+          )}
+        </div>
+      </motion.div>
+    </motion.section>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/*  NEW Section: Peer Context                                          */
+/* ------------------------------------------------------------------ */
+
+function PeerContextSection({ context }: { context: PeerContext }) {
+  const confidenceLabel =
+    context.confidence === 'directional' ? 'Directional' : 'No peer data';
+  const confidenceColor =
+    context.confidence === 'directional' ? '#2563EB' : '#A8A29E';
+
+  return (
+    <motion.section
+      variants={containerVariants}
+      initial="hidden"
+      whileInView="visible"
+      viewport={{ once: true, amount: 0.2 }}
+    >
+      <motion.div variants={itemVariants} className="mb-4">
+        <h2 className="flex items-center gap-2 text-[15px] font-semibold text-[#1C1917]">
+          <Globe className="h-4 w-4 text-[#78716C]" />
+          Peer Context
+        </h2>
+      </motion.div>
+
+      <motion.div
+        variants={itemVariants}
+        className="rounded-xl border border-[#E7E5E4] bg-white p-5"
+      >
+        <div className="mb-3 flex items-center gap-2">
+          <span
+            className="inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-semibold text-white"
+            style={{ backgroundColor: confidenceColor }}
+          >
+            {confidenceLabel}
+          </span>
+        </div>
+        <p className="text-[13px] leading-relaxed text-[#44403C]">{context.note}</p>
+        {context.sources.length > 0 && (
+          <div className="mt-3 flex flex-wrap gap-2">
+            {context.sources.map((s, i) => (
+              <span
+                key={i}
+                className="inline-flex items-center rounded-full border border-[#E7E5E4] bg-[#FAFAF9] px-2.5 py-0.5 text-[11px] text-[#44403C]"
+              >
+                {s}
+              </span>
+            ))}
+          </div>
+        )}
       </motion.div>
     </motion.section>
   );
@@ -310,8 +1094,14 @@ function HeroSection({ report }: { report: TransformationReport }) {
 
 function ExecutiveSummarySection({
   executiveSummary,
+  hideSummaryText = false,
 }: {
   executiveSummary: NonNullable<TransformationReport['executiveSummary']>;
+  /**
+   * Hide the `summary` paragraph (useful when a SnapshotCard above already
+   * shows the same content). Key findings are still rendered.
+   */
+  hideSummaryText?: boolean;
 }) {
   return (
     <motion.section
@@ -324,15 +1114,17 @@ function ExecutiveSummarySection({
         variants={itemVariants}
         className="mb-4 text-[15px] font-semibold text-[#1C1917]"
       >
-        Executive Summary
+        {hideSummaryText ? 'Key Findings' : 'Executive Summary'}
       </motion.h2>
       <motion.div
         variants={itemVariants}
         className="rounded-xl border border-[#E7E5E4] bg-white p-6"
       >
-        <p className="mb-5 text-[15px] leading-relaxed text-[#44403C]">
-          {executiveSummary.summary}
-        </p>
+        {!hideSummaryText && (
+          <p className="mb-5 text-[15px] leading-relaxed text-[#44403C]">
+            {executiveSummary.summary}
+          </p>
+        )}
 
         {executiveSummary.keyFindings.length > 0 && (
           <div className="space-y-3">
@@ -1055,15 +1847,32 @@ function CompletedReport({ report }: { report: TransformationReport }) {
             )}
           </motion.div>
 
+          {/* 0. Snapshot card — 5-second TL;DR (new briefing shape only) */}
+          {report.snapshot && <SnapshotCard snapshot={report.snapshot} />}
+
           {/* 1. Hero: Score + KPIs */}
           <HeroSection report={report} />
 
-          {/* 2. Value Overview Charts */}
+          {/* 1.5 Executive Brief — thesis, big move, decisions, maturity ladders */}
+          {report.executiveBrief && (
+            <ExecutiveBriefCard brief={report.executiveBrief} />
+          )}
+
+          {/* 2. Decision Blocks — the primary body content for briefing-shape reports */}
+          {report.decisionBlocks && report.decisionBlocks.length > 0 && (
+            <DecisionBlocksSection blocks={report.decisionBlocks} />
+          )}
+
+          {/* 3. Value Overview Charts */}
           <ValueOverviewSection report={report} />
 
-          {/* 3. Executive Summary */}
+          {/* 4. Executive Summary — full version for legacy reports;
+              key-findings-only for briefing-shape (snapshot already covers the text) */}
           {report.executiveSummary && (
-            <ExecutiveSummarySection executiveSummary={report.executiveSummary} />
+            <ExecutiveSummarySection
+              executiveSummary={report.executiveSummary}
+              hideSummaryText={!!report.snapshot}
+            />
           )}
 
           {/* 4. Department Scores */}
@@ -1096,6 +1905,14 @@ function CompletedReport({ report }: { report: TransformationReport }) {
             <ImplementationAnalyticsSection phases={report.implementationPlan} />
           )}
 
+          {/* 9.5 Assumptions & Limitations (new briefing shape only) */}
+          {report.assumptionsAndLimits && (
+            <AssumptionsAndLimitationsSection data={report.assumptionsAndLimits} />
+          )}
+
+          {/* 9.6 Peer Context (new briefing shape only) */}
+          {report.peerContext && <PeerContextSection context={report.peerContext} />}
+
           {/* 10. Historical Comparison */}
           <ReportComparisonSection dashboard={dashboard} isLoading={dashboardLoading} />
 
@@ -1107,8 +1924,9 @@ function CompletedReport({ report }: { report: TransformationReport }) {
             className="flex flex-col items-center gap-5 border-t border-[#E7E5E4] pt-10 text-center"
           >
             <p className="text-[14px] text-[#78716C]">
-              Your recommendations have already been added to the Tracker — jump
-              in and start shipping.
+              Decision blocks and 90-day actions are staged in the Tracker for
+              review. Suggested next step: socialize with accountable owners
+              and validate assumptions before committing budget.
             </p>
             <div className="flex items-center gap-3">
               <Link href="/tracker">

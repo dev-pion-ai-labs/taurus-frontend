@@ -315,6 +315,7 @@ export interface TransformationReport {
   sessionId: string;
   organizationId: string;
   status: ReportStatus;
+  // Legacy fields — populated for backward-compatible rendering
   overallScore: number | null;
   maturityLevel: string | null;
   totalEfficiencyValue: number | null;
@@ -328,8 +329,137 @@ export interface TransformationReport {
   departmentScores: DepartmentScore[] | null;
   recommendations: Recommendation[] | null;
   implementationPlan: Phase[] | null;
+  // New briefing fields (optional — present on reports generated after the
+  // briefing rework; absent on legacy reports)
+  companyType?: CompanyType | null;
+  primaryAudience?: PrimaryAudience | null;
+  reportGoal?: ReportGoal | null;
+  thesis?: string | null;
+  bigMove?: string | null;
+  totalAiValueLow?: number | null;
+  totalAiValueHigh?: number | null;
+  fteRedeployableBand?: FteBand | null;
+  confidenceNote?: ConfidenceNote | null;
+  snapshot?: ReportSnapshot | null;
+  executiveBrief?: ExecutiveBrief | null;
+  decisionBlocks?: DecisionBlock[] | null;
+  assumptionsAndLimits?: AssumptionsAndLimitations | null;
+  peerContext?: PeerContext | null;
   generatedAt: string | null;
   createdAt: string;
+}
+
+// ─── Briefing types ───────────────────────────────────────
+
+export type CompanyType =
+  | 'Enterprise'
+  | 'ProfServices'
+  | 'Startup'
+  | 'ProductTech';
+export type PrimaryAudience = 'CLevel' | 'Partner' | 'Founder';
+export type ReportGoal = 'Decide' | 'Align' | 'Validate' | 'Explore';
+export type ConfidenceNote =
+  | 'data-grounded'
+  | 'directional'
+  | 'order-of-magnitude';
+export type MaturityStage = 'Early' | 'Working' | 'Scaling' | 'Native';
+export type FteBand = '<5' | '5-10' | '10-20' | '20-50' | '50-100' | '100+';
+
+export interface ValueRange {
+  low: number;
+  high: number;
+  logic: string;
+  assumptions: string[];
+  confidenceNote: ConfidenceNote;
+}
+
+export interface MaturityLadder {
+  stage: MaturityStage;
+  evidence: string;
+  gaps: string;
+}
+
+export interface SnapshotStat {
+  label: string;
+  value: string;
+}
+
+export interface ReportSnapshot {
+  headline: string;
+  bottomLine: string;
+  keyStats: SnapshotStat[];
+  watchouts: string[];
+  readingTime: string;
+  confidenceNote: ConfidenceNote;
+}
+
+export interface ExecutiveBrief {
+  thesis: string;
+  bigMove: string;
+  decisionsRequired: string[];
+  valueSummary: ValueRange;
+  fteBand: FteBand;
+  portfolioMaturity: MaturityLadder;
+  deliveryMaturity: MaturityLadder;
+}
+
+export interface ExecutionBlocker {
+  blocker: string;
+  category: 'organizational' | 'technical' | 'behavioral';
+  mitigation: string;
+}
+
+export interface NinetyDayAction {
+  title: string;
+  ownerRole: string;
+  week: string;
+  successSignal: string;
+}
+
+export interface NinetyDayPlan {
+  objective: string;
+  actions: NinetyDayAction[];
+}
+
+export interface RiskTradeoff {
+  risk: string;
+  resistanceSource: string;
+  mitigation: string;
+}
+
+export interface DecisionBlock {
+  id: string;
+  decision: string;
+  whyNow: {
+    urgency: string;
+    costOfInaction: string;
+  };
+  value: ValueRange;
+  ownership: {
+    accountableRole: string;
+    supportingRoles: string[];
+  };
+  executionReality: ExecutionBlocker[];
+  ninetyDayPlan: NinetyDayPlan;
+  proofPoint: {
+    metric: string;
+    threshold: string;
+    reviewBy: string;
+  };
+  dependencies: string[];
+  risksAndTradeoffs: RiskTradeoff[];
+}
+
+export interface AssumptionsAndLimitations {
+  scopeOfInputData: string;
+  uncertaintyNotes: string[];
+  validationRequired: string[];
+}
+
+export interface PeerContext {
+  note: string;
+  confidence: 'directional' | 'none';
+  sources: string[];
 }
 
 export interface DepartmentScore {
