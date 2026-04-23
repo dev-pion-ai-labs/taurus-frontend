@@ -190,19 +190,17 @@ function StatCard({
   label,
   value,
   icon: Icon,
-  format = 'dollar',
   accent = false,
   displayOverride,
 }: {
   label: string;
   value: number;
   icon: React.ElementType;
-  format?: 'dollar' | 'fte';
   accent?: boolean;
   /**
    * If provided, renders this literal string instead of an animated numeric
-   * counter. Used to show ranges ("$40M–$60M") or bands ("50–100 FTEs")
-   * when the report carries briefing-shape data.
+   * counter. Used to show ranges ("$40M–$60M") when the report carries
+   * briefing-shape data.
    */
   displayOverride?: string;
 }) {
@@ -210,9 +208,7 @@ function StatCard({
 
   const formatted = displayOverride
     ? displayOverride
-    : format === 'dollar'
-      ? formatDollar(Math.round(animated))
-      : `${Math.round(animated)} FTEs`;
+    : formatDollar(Math.round(animated));
 
   return (
     <div
@@ -298,9 +294,6 @@ function HeroSection({ report }: { report: TransformationReport }) {
   const totalValueDisplay = hasRangedValue
     ? formatDollarRange(report.totalAiValueLow!, report.totalAiValueHigh!)
     : undefined;
-  const fteDisplay = report.fteRedeployableBand
-    ? `${report.fteRedeployableBand} FTEs`
-    : undefined;
 
   return (
     <motion.section
@@ -362,7 +355,7 @@ function HeroSection({ report }: { report: TransformationReport }) {
 
       <motion.div
         variants={containerVariants}
-        className="grid grid-cols-2 gap-3 sm:grid-cols-4"
+        className="grid grid-cols-1 gap-3 sm:grid-cols-3"
       >
         <motion.div variants={itemVariants}>
           <StatCard
@@ -385,15 +378,6 @@ function HeroSection({ report }: { report: TransformationReport }) {
             label="Growth"
             value={report.totalGrowthValue ?? 0}
             icon={TrendingUp}
-          />
-        </motion.div>
-        <motion.div variants={itemVariants}>
-          <StatCard
-            label="Capacity freed"
-            value={report.fteRedeployable ?? 0}
-            icon={Users}
-            format="fte"
-            displayOverride={fteDisplay}
           />
         </motion.div>
       </motion.div>

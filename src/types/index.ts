@@ -321,7 +321,6 @@ export interface TransformationReport {
   totalEfficiencyValue: number | null;
   totalGrowthValue: number | null;
   totalAiValue: number | null;
-  fteRedeployable: number | null;
   executiveSummary: {
     summary: string;
     keyFindings: string[];
@@ -338,7 +337,6 @@ export interface TransformationReport {
   bigMove?: string | null;
   totalAiValueLow?: number | null;
   totalAiValueHigh?: number | null;
-  fteRedeployableBand?: FteBand | null;
   confidenceNote?: ConfidenceNote | null;
   snapshot?: ReportSnapshot | null;
   executiveBrief?: ExecutiveBrief | null;
@@ -363,7 +361,6 @@ export type ConfidenceNote =
   | 'directional'
   | 'order-of-magnitude';
 export type MaturityStage = 'Early' | 'Working' | 'Scaling' | 'Native';
-export type FteBand = '<5' | '5-10' | '10-20' | '20-50' | '50-100' | '100+';
 
 export interface ValueRange {
   low: number;
@@ -398,7 +395,6 @@ export interface ExecutiveBrief {
   bigMove: string;
   decisionsRequired: string[];
   valueSummary: ValueRange;
-  fteBand: FteBand;
   portfolioMaturity: MaturityLadder;
   deliveryMaturity: MaturityLadder;
 }
