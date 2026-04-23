@@ -84,7 +84,10 @@ export interface SessionQuestion {
   answeredAt: string | null;
   skipped: boolean;
   isAdaptive?: boolean;
-  question: TemplateQuestion;
+  adaptiveText?: string | null;
+  adaptiveType?: TemplateQuestion['questionType'] | null;
+  adaptiveOptions?: string[] | null;
+  question: TemplateQuestion | null;
 }
 
 export interface CurrentQuestionResponse {

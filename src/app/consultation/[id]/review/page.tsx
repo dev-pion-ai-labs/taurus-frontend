@@ -180,13 +180,26 @@ function QuestionCard({
 }) {
   const { question, answer, skipped, answeredAt } = sq;
 
+  // Adaptive questions store their text/type/options directly on the
+  // session-question row (question relation is null); template questions
+  // have them on the related TemplateQuestion.
+  const questionText = sq.isAdaptive
+    ? sq.adaptiveText ?? ''
+    : question?.questionText ?? '';
+  const questionType = sq.isAdaptive
+    ? sq.adaptiveType ?? null
+    : question?.questionType ?? null;
+  const options = sq.isAdaptive
+    ? sq.adaptiveOptions ?? []
+    : question?.options ?? [];
+
   return (
     <div className="rounded-[12px] border border-[#E7E5E4] bg-white p-6">
       {/* Question header */}
       <div className="mb-4 flex items-start justify-between gap-4">
         <p className="text-[16px] font-medium leading-snug text-[#1C1917]">
           <span className="mr-2 text-[#A8A29E]">Q{index}.</span>
-          {question.questionText}
+          {questionText}
         </p>
         {skipped && (
           <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-[#F5F5F4] px-2.5 py-0.5 text-xs font-medium text-[#A8A29E]">
@@ -197,24 +210,24 @@ function QuestionCard({
       </div>
 
       {/* Answer */}
-      {!skipped && answer != null && (
+      {!skipped && answer != null && questionType && (
         <div className="mb-3">
-          {question.questionType === 'TEXT' && (
+          {questionType === 'TEXT' && (
             <TextAnswer value={answer.value as string} />
           )}
-          {question.questionType === 'SINGLE_CHOICE' && (
+          {questionType === 'SINGLE_CHOICE' && (
             <SingleChoiceAnswer
               value={answer.value as string}
-              options={question.options ?? []}
+              options={options}
             />
           )}
-          {question.questionType === 'MULTI_CHOICE' && (
+          {questionType === 'MULTI_CHOICE' && (
             <MultiChoiceAnswer
               value={answer.value as string[]}
-              options={question.options ?? []}
+              options={options}
             />
           )}
-          {question.questionType === 'SCALE' && (
+          {questionType === 'SCALE' && (
             <ScaleAnswer value={answer.value as number} />
           )}
         </div>
