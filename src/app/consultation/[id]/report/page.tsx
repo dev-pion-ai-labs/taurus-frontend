@@ -186,6 +186,13 @@ const MATURITY_STAGE_COLOR: Record<string, string> = {
   Native: '#16a34a',
 };
 
+// Drop FTE/capacity-freed stats from older reports whose JSON was generated
+// before the FTE purge and still carries those labels in keyStats.
+function isNonFteStat(stat: { label: string; value: string }): boolean {
+  const text = `${stat.label} ${stat.value}`.toLowerCase();
+  return !/\bftes?\b|capacity freed|redeployable|full-time equivalent/.test(text);
+}
+
 function StatCard({
   label,
   value,
@@ -485,7 +492,7 @@ function SnapshotCard({ snapshot }: { snapshot: ReportSnapshot }) {
         </p>
 
         <div className="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          {snapshot.keyStats.map((stat, i) => (
+          {snapshot.keyStats.filter(isNonFteStat).map((stat, i) => (
             <motion.div
               key={i}
               initial={{ opacity: 0, y: 8 }}
