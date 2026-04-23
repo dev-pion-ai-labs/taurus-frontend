@@ -462,7 +462,7 @@ function QuestionFlow({
           >
             {/* Question text */}
             <h2 className="mb-10 text-2xl font-medium leading-relaxed text-[#1C1917]">
-              {question.question.questionText}
+              {question.question?.questionText ?? question.adaptiveText ?? ''}
             </h2>
 
             {/* Question input */}
@@ -505,7 +505,7 @@ function QuestionFlow({
               </Button>
 
               {/* Skip button */}
-              {!question.question.isRequired && (
+              {!(question.question?.isRequired ?? true) && (
                 <button
                   type="button"
                   onClick={handleSkip}

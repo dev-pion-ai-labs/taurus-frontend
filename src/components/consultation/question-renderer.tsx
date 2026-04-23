@@ -21,7 +21,9 @@ const scaleLabels: Record<number, string> = {
 };
 
 export function QuestionRenderer({ question, value, onChange }: QuestionRendererProps) {
-  const { questionType, options } = question.question;
+  const questionType = question.question?.questionType ?? question.adaptiveType ?? null;
+  const options = question.question?.options ?? question.adaptiveOptions ?? null;
+  if (!questionType) return null;
 
   if (questionType === 'TEXT') {
     const textValue = typeof value === 'string' ? value : '';
