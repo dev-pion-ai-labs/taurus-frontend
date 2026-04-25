@@ -125,6 +125,54 @@ const processTabs = [
 ];
 
 /* ------------------------------------------------------------------ */
+/*  Consultation levels data (drives auto-cycling mockup)              */
+/* ------------------------------------------------------------------ */
+const consultationLevels = [
+  {
+    key: 'ORG',
+    label: 'Organisation',
+    chipBg: '#FFF1F2',
+    chipText: '#E11D48',
+    title: 'Whole-company strategy in one session',
+    description:
+      'A board-level consultation that covers the entire organisation — strategy, maturity, value at stake. Best for kickoff and annual planning.',
+    bullets: [
+      'Industry-specific question banks',
+      'Up to 20 questions across 5 sections',
+      'Executive briefing report with decision blocks',
+    ],
+  },
+  {
+    key: 'DEPARTMENT',
+    label: 'Department',
+    chipBg: '#FEF3C7',
+    chipText: '#B45309',
+    title: 'Zoom in on a single team',
+    description:
+      'Scope a consultation to one department and the questions narrow to its workflows, headcount, and pain points. ~12 questions, lead-by-lead.',
+    bullets: [
+      'Grounded in real headcount and salary data',
+      '12-question cap, ~15 min completion',
+      'Report scoped to that department only',
+    ],
+  },
+  {
+    key: 'WORKFLOW',
+    label: 'Workflow',
+    chipBg: '#DCFCE7',
+    chipText: '#15803D',
+    title: 'Drill into a single workflow',
+    description:
+      'Tightest grounding — one process, its actual hours, automation level, and pain points. ~8 questions for a focused decision.',
+    bullets: [
+      'Pinned to one workflow’s real metrics',
+      '8-question cap, ~10 min completion',
+      'Sharpest dollar-value range and recommendation',
+    ],
+  },
+] as const;
+
+/* ------------------------------------------------------------------ */
 /*  Pricing data                                                       */
 /* ------------------------------------------------------------------ */
 const pricingPlans = {
@@ -202,6 +250,17 @@ export default function HomePage() {
   const [scrolled, setScrolled] = useState(false);
   const [activeFeatureTab, setActiveFeatureTab] = useState(0);
   const [activeProcessTab, setActiveProcessTab] = useState(0);
+  const [consultLevel, setConsultLevel] = useState(0); // 0=ORG, 1=DEPT, 2=WORKFLOW
+  const [consultPaused, setConsultPaused] = useState(false);
+
+  /* ---- Auto-cycle consultation level mockup ---- */
+  useEffect(() => {
+    if (consultPaused) return;
+    const id = setInterval(() => {
+      setConsultLevel((prev) => (prev + 1) % 3);
+    }, 5000);
+    return () => clearInterval(id);
+  }, [consultPaused]);
 
   /* ---- Smooth scroll with Lenis ---- */
   useEffect(() => {
@@ -925,56 +984,118 @@ export default function HomePage() {
               decision lives in one place.
             </motion.p>
 
-            {/* Row 1 — Consultation (text left, mockup right) */}
+            {/* Row 1 — Consultation (text left, mockup right) — auto-cycles
+                across the 3 levels (Org → Department → Workflow) */}
             <motion.div
               variants={fadeUp}
               transition={{ duration: 0.6 }}
-              className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-center mb-24"
+              className="mb-24"
+              onMouseEnter={() => setConsultPaused(true)}
+              onMouseLeave={() => setConsultPaused(false)}
             >
-              <div className="lg:col-span-5 order-2 lg:order-1">
-                <div
-                  className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold mb-5"
-                  style={{ backgroundColor: '#F5F5F4', color: '#1C1917' }}
-                >
-                  <MessageSquare className="w-3.5 h-3.5" />
-                  Consultation
-                </div>
-                <h3
-                  className="text-2xl md:text-3xl font-bold mb-4"
-                  style={{ color: '#1C1917' }}
-                >
-                  An adaptive interview that actually listens
-                </h3>
-                <p
-                  className="leading-relaxed mb-6"
-                  style={{ fontSize: 15, color: '#78716C', lineHeight: 1.75 }}
-                >
-                  Run consultations at three levels — organisation, department,
-                  or a single workflow. Questions are generated from your real
-                  data and tighten as you answer. No generic forms.
-                </p>
-                <ul className="space-y-2.5">
-                  {[
-                    'Org / Department / Workflow scopes',
-                    'Industry-specific question banks',
-                    'Adaptive follow-ups grounded in your answers',
-                  ].map((item) => (
-                    <li
-                      key={item}
-                      className="flex items-start gap-2.5 text-sm"
-                      style={{ color: '#57534E' }}
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-center">
+                <div className="lg:col-span-5 order-2 lg:order-1">
+                  <div
+                    className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold mb-5"
+                    style={{ backgroundColor: '#F5F5F4', color: '#1C1917' }}
+                  >
+                    <MessageSquare className="w-3.5 h-3.5" />
+                    Consultation
+                  </div>
+
+                  {/* Level pills (also act as manual switcher) */}
+                  <div className="flex flex-wrap gap-2 mb-5">
+                    {consultationLevels.map((lvl, i) => {
+                      const active = consultLevel === i;
+                      return (
+                        <button
+                          key={lvl.key}
+                          onClick={() => {
+                            setConsultLevel(i);
+                            setConsultPaused(true);
+                          }}
+                          className="px-3 py-1 rounded-full text-[11px] font-semibold border transition-all cursor-pointer"
+                          style={{
+                            backgroundColor: active ? lvl.chipText : '#FFFFFF',
+                            color: active ? '#FFFFFF' : '#57534E',
+                            borderColor: active ? lvl.chipText : '#E7E5E4',
+                          }}
+                        >
+                          {lvl.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  <AnimatePresence mode="wait">
+                    <motion.div
+                      key={consultLevel}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -10 }}
+                      transition={{ duration: 0.35 }}
                     >
-                      <CheckCircle2
-                        className="w-4 h-4 shrink-0 mt-0.5"
-                        style={{ color: '#0D9488' }}
+                      <h3
+                        className="text-2xl md:text-3xl font-bold mb-4"
+                        style={{ color: '#1C1917' }}
+                      >
+                        {consultationLevels[consultLevel].title}
+                      </h3>
+                      <p
+                        className="leading-relaxed mb-6"
+                        style={{ fontSize: 15, color: '#78716C', lineHeight: 1.75 }}
+                      >
+                        {consultationLevels[consultLevel].description}
+                      </p>
+                      <ul className="space-y-2.5">
+                        {consultationLevels[consultLevel].bullets.map((item) => (
+                          <li
+                            key={item}
+                            className="flex items-start gap-2.5 text-sm"
+                            style={{ color: '#57534E' }}
+                          >
+                            <CheckCircle2
+                              className="w-4 h-4 shrink-0 mt-0.5"
+                              style={{ color: '#0D9488' }}
+                            />
+                            {item}
+                          </li>
+                        ))}
+                      </ul>
+                    </motion.div>
+                  </AnimatePresence>
+                </div>
+
+                <div className="lg:col-span-7 order-1 lg:order-2">
+                  <AnimatePresence mode="wait">
+                    <motion.div
+                      key={consultLevel}
+                      initial={{ opacity: 0, x: 20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      exit={{ opacity: 0, x: -20 }}
+                      transition={{ duration: 0.4 }}
+                    >
+                      <ConsultationMockup
+                        level={consultationLevels[consultLevel].key}
                       />
-                      {item}
-                    </li>
-                  ))}
-                </ul>
+                    </motion.div>
+                  </AnimatePresence>
+                </div>
               </div>
-              <div className="lg:col-span-7 order-1 lg:order-2">
-                <ConsultationMockup />
+
+              {/* Auto-cycle progress dots */}
+              <div className="flex items-center justify-center gap-2 mt-8">
+                {consultationLevels.map((lvl, i) => (
+                  <div
+                    key={lvl.key}
+                    className="h-1 rounded-full transition-all duration-500"
+                    style={{
+                      width: consultLevel === i ? 32 : 8,
+                      backgroundColor:
+                        consultLevel === i ? lvl.chipText : '#E7E5E4',
+                    }}
+                  />
+                ))}
               </div>
             </motion.div>
 
@@ -1144,7 +1265,7 @@ export default function HomePage() {
                 <PricingCard plan={pricingPlans.starter} variant="light" />
               </motion.div>
 
-              {/* Professional */}
+              {/* Enterprise */}
               <motion.div
                 variants={fadeUp}
                 transition={{ duration: 0.5 }}
@@ -1154,11 +1275,11 @@ export default function HomePage() {
                   borderColor: '#E7E5E4',
                 }}
               >
-                <PricingCard plan={pricingPlans.professional} variant="light" />
+                <PricingCard plan={pricingPlans.enterprise} variant="light" />
               </motion.div>
             </motion.div>
 
-            {/* Enterprise - featured dark card */}
+            {/* Professional - featured dark card */}
             <motion.div
               variants={fadeUp}
               transition={{ duration: 0.5 }}
@@ -1171,7 +1292,7 @@ export default function HomePage() {
               >
                 Most Popular
               </div>
-              <PricingCard plan={pricingPlans.enterprise} variant="dark" />
+              <PricingCard plan={pricingPlans.professional} variant="dark" />
             </motion.div>
           </motion.div>
         </div>
@@ -2361,18 +2482,92 @@ function PricingCard({
 }
 
 /* ================================================================== */
-/*  CONSULTATION MOCKUP                                                */
+/*  CONSULTATION MOCKUP — content varies per scope level               */
 /* ================================================================== */
-function ConsultationMockup() {
+type ConsultLevelKey = 'ORG' | 'DEPARTMENT' | 'WORKFLOW';
+
+const CONSULT_MOCKUP_DATA: Record<
+  ConsultLevelKey,
+  {
+    url: string;
+    haloGradient: string;
+    chip: { label: string; subject: string; bg: string; text: string } | null;
+    section: { label: string; color: string };
+    progress: { current: number; total: number; pct: number };
+    question: string;
+    options: { label: string; selected: boolean }[];
+  }
+> = {
+  ORG: {
+    url: 'taurus.ai/consultation/c8a4-9f3e',
+    haloGradient:
+      'linear-gradient(135deg, rgba(254,202,202,0.6), rgba(254,243,199,0.6))',
+    chip: null,
+    section: { label: 'Personalized', color: '#0D9488' },
+    progress: { current: 12, total: 20, pct: 60 },
+    question:
+      'Where do you see the biggest AI value-creation opportunity across the company over the next 18 months?',
+    options: [
+      { label: 'Cost reduction across operations', selected: false },
+      { label: 'New revenue streams from AI products', selected: true },
+      { label: 'Employee productivity gains', selected: false },
+      { label: 'Customer experience differentiation', selected: false },
+    ],
+  },
+  DEPARTMENT: {
+    url: 'taurus.ai/consultation/d7b2-4a1c',
+    haloGradient:
+      'linear-gradient(135deg, rgba(254,243,199,0.7), rgba(253,230,138,0.5))',
+    chip: {
+      label: 'Consulting on',
+      subject: 'Customer Success',
+      bg: '#FEF3C7',
+      text: '#B45309',
+    },
+    section: { label: 'Personalized', color: '#B45309' },
+    progress: { current: 7, total: 12, pct: 58 },
+    question:
+      'What share of the CS team’s weekly time goes to manual renewal-cycle work today?',
+    options: [
+      { label: 'Less than 25% — mostly automated', selected: false },
+      { label: '25–50% — partial automation', selected: false },
+      { label: '50–75% — mostly manual', selected: true },
+      { label: 'More than 75% — fully manual', selected: false },
+    ],
+  },
+  WORKFLOW: {
+    url: 'taurus.ai/consultation/w3e9-8b7d',
+    haloGradient:
+      'linear-gradient(135deg, rgba(220,252,231,0.7), rgba(186,230,253,0.5))',
+    chip: {
+      label: 'Consulting on',
+      subject: 'AP invoice triage · Finance',
+      bg: '#DCFCE7',
+      text: '#15803D',
+    },
+    section: { label: 'Adaptive', color: '#15803D' },
+    progress: { current: 5, total: 8, pct: 62 },
+    question:
+      'How long does an average AP invoice take to clear from receipt to GL post in this workflow?',
+    options: [
+      { label: 'Less than 1 day', selected: false },
+      { label: '1–3 days', selected: true },
+      { label: '3–7 days', selected: false },
+      { label: 'More than 7 days', selected: false },
+    ],
+  },
+};
+
+function ConsultationMockup({ level }: { level?: ConsultLevelKey }) {
+  const data = CONSULT_MOCKUP_DATA[level ?? 'DEPARTMENT'];
+  const accent = data.section.color;
+
   return (
     <div className="relative">
       {/* Glow / shadow halo */}
       <div
-        className="absolute -inset-4 rounded-3xl blur-3xl opacity-50"
-        style={{
-          background:
-            'linear-gradient(135deg, rgba(254,202,202,0.6), rgba(254,243,199,0.6))',
-        }}
+        className="absolute -inset-4 rounded-3xl blur-3xl opacity-50 transition-all duration-500"
+        style={{ background: data.haloGradient }}
       />
 
       {/* Browser chrome */}
@@ -2393,35 +2588,46 @@ function ConsultationMockup() {
             className="flex-1 mx-3 px-3 py-0.5 rounded-md text-[11px] font-medium truncate"
             style={{ backgroundColor: '#F5F5F4', color: '#78716C' }}
           >
-            taurus.ai/consultation/c8a4-9f3e
+            {data.url}
           </div>
         </div>
 
         {/* Body */}
         <div className="p-8 md:p-10" style={{ backgroundColor: '#FFFFFF' }}>
-          {/* Scope chip */}
-          <div className="flex items-center gap-2 mb-5">
-            <span
-              className="text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full"
-              style={{ backgroundColor: '#FFF1F2', color: '#E11D48' }}
-            >
-              Consulting on
-            </span>
-            <span className="text-xs font-semibold" style={{ color: '#1C1917' }}>
-              Customer Success · Renewal workflow
-            </span>
-          </div>
+          {/* Scope chip (omitted for ORG) */}
+          {data.chip ? (
+            <div className="flex items-center gap-2 mb-5">
+              <span
+                className="text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full"
+                style={{ backgroundColor: data.chip.bg, color: data.chip.text }}
+              >
+                {data.chip.label}
+              </span>
+              <span className="text-xs font-semibold" style={{ color: '#1C1917' }}>
+                {data.chip.subject}
+              </span>
+            </div>
+          ) : (
+            <div className="flex items-center gap-2 mb-5">
+              <span
+                className="text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full"
+                style={{ backgroundColor: '#F5F5F4', color: '#78716C' }}
+              >
+                Organisation-wide
+              </span>
+            </div>
+          )}
 
           {/* Section + progress */}
           <div className="flex items-center justify-between mb-2">
             <span
               className="text-[10px] font-bold uppercase tracking-wider"
-              style={{ color: '#0D9488' }}
+              style={{ color: accent }}
             >
-              Personalized
+              {data.section.label}
             </span>
             <span className="text-xs font-medium" style={{ color: '#78716C' }}>
-              Question 5 of 8
+              Question {data.progress.current} of {data.progress.total}
             </span>
           </div>
           <div
@@ -2429,8 +2635,8 @@ function ConsultationMockup() {
             style={{ backgroundColor: '#F5F5F4' }}
           >
             <div
-              className="h-full rounded-full"
-              style={{ width: '62%', backgroundColor: '#1C1917' }}
+              className="h-full rounded-full transition-all duration-700"
+              style={{ width: `${data.progress.pct}%`, backgroundColor: '#1C1917' }}
             />
           </div>
 
@@ -2439,18 +2645,12 @@ function ConsultationMockup() {
             className="text-lg md:text-xl font-semibold leading-snug mb-6"
             style={{ color: '#1C1917' }}
           >
-            What share of the renewal workflow is currently handled manually
-            by the CS team each week?
+            {data.question}
           </h4>
 
           {/* Options */}
           <div className="space-y-2.5 mb-8">
-            {[
-              { label: 'Less than 25% — mostly automated', selected: false },
-              { label: '25–50% — partial automation', selected: false },
-              { label: '50–75% — mostly manual', selected: true },
-              { label: 'More than 75% — fully manual', selected: false },
-            ].map((opt) => (
+            {data.options.map((opt) => (
               <div
                 key={opt.label}
                 className="flex items-center gap-3 px-4 py-3 rounded-xl border transition-all cursor-default"
@@ -2461,9 +2661,7 @@ function ConsultationMockup() {
               >
                 <div
                   className="w-4 h-4 rounded-full border-2 flex items-center justify-center shrink-0"
-                  style={{
-                    borderColor: opt.selected ? '#1C1917' : '#D6D3D1',
-                  }}
+                  style={{ borderColor: opt.selected ? '#1C1917' : '#D6D3D1' }}
                 >
                   {opt.selected && (
                     <div
@@ -2487,10 +2685,7 @@ function ConsultationMockup() {
 
           {/* CTA */}
           <div className="flex items-center justify-between">
-            <button
-              className="text-xs font-medium"
-              style={{ color: '#A8A29E' }}
-            >
+            <button className="text-xs font-medium" style={{ color: '#A8A29E' }}>
               Skip
             </button>
             <button
