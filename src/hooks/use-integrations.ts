@@ -23,16 +23,18 @@ export function useConnectIntegration() {
       provider,
       code,
       redirectUri,
+      state,
     }: {
       provider: string;
       code: string;
       redirectUri?: string;
+      state?: string;
     }) =>
       apiClient<IntegrationConnection>(
         `/integrations/${provider.toLowerCase().replace(/_/g, '-')}/callback`,
         {
           method: 'POST',
-          body: JSON.stringify({ code, redirectUri }),
+          body: JSON.stringify({ code, redirectUri, state }),
         },
       ),
     onSuccess: () => {
