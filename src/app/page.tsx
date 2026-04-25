@@ -324,6 +324,7 @@ export default function HomePage() {
               { label: 'Home', id: 'hero' },
               { label: 'Features', id: 'features' },
               { label: 'Process', id: 'process' },
+              { label: 'Integrations', id: 'integrations' },
               { label: 'Pricing', id: 'pricing' },
             ].map((link) => (
               <button
@@ -1202,6 +1203,201 @@ export default function HomePage() {
               </div>
               <div className="lg:col-span-7 order-1 lg:order-2">
                 <ImplementationMockup />
+              </div>
+            </motion.div>
+          </motion.div>
+        </div>
+      </section>
+
+      {/* ============================================================ */}
+      {/*  SECTION 4.7: INTEGRATIONS                                   */}
+      {/* ============================================================ */}
+      <section
+        id="integrations"
+        className="relative z-10"
+        style={{
+          background: 'linear-gradient(180deg, #FAFAF9 0%, #FFFFFF 100%)',
+          paddingTop: 100,
+          paddingBottom: 100,
+        }}
+      >
+        <div className="max-w-[1200px] mx-auto px-6">
+          <motion.div
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, margin: '-80px' }}
+            variants={staggerContainer}
+          >
+            <motion.div
+              variants={fadeUp}
+              transition={{ duration: 0.6 }}
+              className="text-center mb-4"
+            >
+              <span
+                className="inline-block px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wider"
+                style={{ backgroundColor: '#FFF1F2', color: '#E11D48' }}
+              >
+                Integrations
+              </span>
+            </motion.div>
+            <motion.h2
+              variants={fadeUp}
+              transition={{ duration: 0.6 }}
+              className="text-center font-bold mb-4"
+              style={{
+                fontSize: 'clamp(28px, 4vw, 40px)',
+                color: '#1C1917',
+              }}
+            >
+              Plays nicely with your stack
+            </motion.h2>
+            <motion.p
+              variants={fadeUp}
+              transition={{ duration: 0.6 }}
+              className="text-center mx-auto mb-12 max-w-[640px]"
+              style={{ fontSize: 16, color: '#78716C', lineHeight: 1.7 }}
+            >
+              Taurus pulls signal from the tools your team already uses and
+              pushes actions back where work happens. No data lock-in.
+            </motion.p>
+
+            {/* Grid */}
+            <motion.div
+              variants={staggerContainer}
+              className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 mb-10"
+            >
+              {[
+                {
+                  name: 'Slack',
+                  initial: 'S',
+                  color: '#4A154B',
+                  desc: 'Action stall alerts and report-ready pings.',
+                },
+                {
+                  name: 'Microsoft Teams',
+                  initial: 'T',
+                  color: '#6264A7',
+                  desc: 'Same alerts, native Teams notifications.',
+                },
+                {
+                  name: 'Google Drive',
+                  initial: 'G',
+                  color: '#1FA463',
+                  desc: 'Pull org docs into the consultation context.',
+                },
+                {
+                  name: 'Notion',
+                  initial: 'N',
+                  color: '#1C1917',
+                  desc: 'Sync reports and roadmaps to your workspace.',
+                },
+                {
+                  name: 'Jira',
+                  initial: 'J',
+                  color: '#2684FF',
+                  desc: 'Push tracker actions as Jira tickets, two-way sync.',
+                },
+                {
+                  name: 'Salesforce',
+                  initial: 'S',
+                  color: '#00A1E0',
+                  desc: 'Read CRM signal into deal-cycle workflows.',
+                },
+                {
+                  name: 'HubSpot',
+                  initial: 'H',
+                  color: '#FF7A59',
+                  desc: 'Pipeline + revenue context for value calculations.',
+                },
+                {
+                  name: 'Zapier',
+                  initial: 'Z',
+                  color: '#FF4F00',
+                  desc: '5,000+ apps via Zaps for the long tail.',
+                },
+              ].map((tool) => (
+                <motion.div
+                  key={tool.name}
+                  variants={fadeUp}
+                  transition={{ duration: 0.4 }}
+                  whileHover={{ y: -4, transition: { duration: 0.2 } }}
+                  className="rounded-2xl border p-5 cursor-default"
+                  style={{
+                    backgroundColor: '#FFFFFF',
+                    borderColor: '#E7E5E4',
+                  }}
+                >
+                  <div className="flex items-center gap-3 mb-3">
+                    <div
+                      className="w-10 h-10 rounded-xl flex items-center justify-center text-base font-bold shrink-0"
+                      style={{ backgroundColor: tool.color, color: '#FFFFFF' }}
+                    >
+                      {tool.initial}
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold truncate" style={{ color: '#1C1917' }}>
+                        {tool.name}
+                      </p>
+                      <p className="text-[11px] flex items-center gap-1" style={{ color: '#0D9488' }}>
+                        <span
+                          className="w-1.5 h-1.5 rounded-full"
+                          style={{ backgroundColor: '#0D9488' }}
+                        />
+                        Native
+                      </p>
+                    </div>
+                  </div>
+                  <p
+                    className="text-xs leading-relaxed"
+                    style={{ color: '#78716C', lineHeight: 1.6 }}
+                  >
+                    {tool.desc}
+                  </p>
+                </motion.div>
+              ))}
+            </motion.div>
+
+            {/* Bottom note */}
+            <motion.div
+              variants={fadeUp}
+              transition={{ duration: 0.6 }}
+              className="rounded-2xl border p-6 md:p-8 flex flex-col md:flex-row md:items-center gap-5 md:gap-8"
+              style={{
+                backgroundColor: '#FAFAF9',
+                borderColor: '#E7E5E4',
+              }}
+            >
+              <div className="flex items-center gap-3">
+                <div
+                  className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0"
+                  style={{ backgroundColor: '#1C1917' }}
+                >
+                  <Link2 className="w-5 h-5 text-white" />
+                </div>
+                <div>
+                  <p className="text-sm font-semibold" style={{ color: '#1C1917' }}>
+                    Don&apos;t see your tool?
+                  </p>
+                  <p className="text-xs" style={{ color: '#78716C' }}>
+                    Public REST API + webhooks for anything custom.
+                  </p>
+                </div>
+              </div>
+              <div className="flex-1 hidden md:block" />
+              <div className="flex flex-wrap gap-2">
+                {['REST API', 'Webhooks', 'OAuth 2.0', 'SCIM provisioning'].map((tag) => (
+                  <span
+                    key={tag}
+                    className="px-3 py-1 rounded-full text-[11px] font-medium border"
+                    style={{
+                      backgroundColor: '#FFFFFF',
+                      borderColor: '#E7E5E4',
+                      color: '#57534E',
+                    }}
+                  >
+                    {tag}
+                  </span>
+                ))}
               </div>
             </motion.div>
           </motion.div>
