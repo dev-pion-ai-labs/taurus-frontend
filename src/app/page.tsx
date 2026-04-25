@@ -258,7 +258,7 @@ export default function HomePage() {
     if (consultPaused) return;
     const id = setInterval(() => {
       setConsultLevel((prev) => (prev + 1) % 3);
-    }, 5000);
+    }, 3500);
     return () => clearInterval(id);
   }, [consultPaused]);
 
