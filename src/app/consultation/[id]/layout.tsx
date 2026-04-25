@@ -3,7 +3,8 @@
 import { useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { LogOut } from 'lucide-react';
+import { LogOut, Trash2 } from 'lucide-react';
+import { toast } from 'sonner';
 import { ProtectedRoute } from '@/components/shared/protected-route';
 import { Button } from '@/components/ui/button';
 import {
@@ -29,11 +30,20 @@ export default function ConsultationLayout({
   const abandonSession = useAbandonSession(sessionId);
   const [dialogOpen, setDialogOpen] = useState(false);
 
-  const handleExit = async () => {
+  // Default exit = save progress and leave. Session stays IN_PROGRESS so the
+  // user can return any time from the dashboard or consultations hub. We do
+  // NOT call the abandon endpoint here — that's an explicit "Discard" action.
+  const handleSaveAndExit = () => {
+    setDialogOpen(false);
+    router.push('/dashboard');
+  };
+
+  const handleDiscard = async () => {
     try {
       await abandonSession.mutateAsync();
+      toast.success('Consultation discarded');
     } catch {
-      // Session may already be completed/abandoned — still navigate away
+      // Session may already be completed/abandoned — still navigate away.
     }
     router.push('/dashboard');
   };
@@ -62,25 +72,35 @@ export default function ConsultationLayout({
               </DialogTrigger>
               <DialogContent showCloseButton={false}>
                 <DialogHeader>
-                  <DialogTitle>Exit consultation?</DialogTitle>
+                  <DialogTitle>Leaving the consultation?</DialogTitle>
                   <DialogDescription>
-                    Are you sure you want to exit? Your progress is saved, but the
-                    session will be marked as abandoned.
+                    Your progress is auto-saved. Pick up where you left off
+                    any time from the dashboard or the Consultations hub.
                   </DialogDescription>
                 </DialogHeader>
-                <DialogFooter>
-                  <DialogClose
-                    render={<Button variant="outline" />}
-                  >
-                    Cancel
-                  </DialogClose>
-                  <Button
-                    onClick={handleExit}
+                <DialogFooter className="flex-col-reverse gap-2 sm:flex-row sm:justify-between">
+                  <button
+                    type="button"
+                    onClick={handleDiscard}
                     disabled={abandonSession.isPending}
-                    className="bg-[#1C1917] text-white hover:bg-[#1C1917]/90"
+                    className="inline-flex items-center gap-1.5 self-start text-xs font-medium text-[#A8A29E] transition-colors hover:text-red-600 disabled:opacity-50"
                   >
-                    {abandonSession.isPending ? 'Exiting...' : 'Yes, exit'}
-                  </Button>
+                    <Trash2 className="h-3 w-3" />
+                    {abandonSession.isPending
+                      ? 'Discarding…'
+                      : 'Discard this consultation'}
+                  </button>
+                  <div className="flex gap-2">
+                    <DialogClose render={<Button variant="outline" />}>
+                      Keep going
+                    </DialogClose>
+                    <Button
+                      onClick={handleSaveAndExit}
+                      className="bg-[#1C1917] text-white hover:bg-[#1C1917]/90"
+                    >
+                      Save & continue later
+                    </Button>
+                  </div>
                 </DialogFooter>
               </DialogContent>
             </Dialog>
