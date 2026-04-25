@@ -630,6 +630,7 @@ function IntegrationsTab() {
             provider,
             code,
             redirectUri: `${window.location.origin}/settings?tab=integrations`,
+            state: stateParam,
           },
           {
             onSuccess: () => {
@@ -746,11 +747,14 @@ function IntegrationsTab() {
                         {integration.description}
                       </p>
                       {connected ? (
-                        <div className="flex items-center gap-2 mt-3">
+                        <div className="mt-3">
                           {connected.externalTeamName && (
-                            <span className="text-xs text-[#57534E]">
-                              {connected.externalTeamName}
-                            </span>
+                            <p className="text-xs text-[#57534E] mb-2">
+                              <span className="text-[#A8A29E]">Connected to: </span>
+                              <span className="font-semibold text-[#1C1917]">
+                                {connected.externalTeamName}
+                              </span>
+                            </p>
                           )}
                           <Button
                             size="sm"
