@@ -5,16 +5,33 @@ import { apiClient } from '@/lib/api';
 import type {
   ConsultationSession,
   CurrentQuestionResponse,
+  StartSessionInput,
   SubmitAnswerResponse,
 } from '@/types';
 
-export function useSessions(page = 1) {
+interface UseSessionsParams {
+  page?: number;
+  scope?: StartSessionInput['scope'];
+  departmentId?: string;
+  workflowId?: string;
+}
+
+export function useSessions(params: number | UseSessionsParams = 1) {
+  const { page = 1, scope, departmentId, workflowId }: UseSessionsParams =
+    typeof params === 'number' ? { page: params } : params;
+
+  const search = new URLSearchParams({
+    page: String(page),
+    limit: '20',
+  });
+  if (scope) search.set('scope', scope);
+  if (departmentId) search.set('departmentId', departmentId);
+  if (workflowId) search.set('workflowId', workflowId);
+
   return useQuery({
-    queryKey: ['sessions', { page }],
+    queryKey: ['sessions', { page, scope, departmentId, workflowId }],
     queryFn: () =>
-      apiClient<ConsultationSession[]>(
-        `/consultation/sessions?page=${page}&limit=20`
-      ),
+      apiClient<ConsultationSession[]>(`/consultation/sessions?${search.toString()}`),
     placeholderData: (prev) => prev,
   });
 }
@@ -50,9 +67,10 @@ export function useStartSession() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: () =>
+    mutationFn: (input?: StartSessionInput) =>
       apiClient<ConsultationSession>('/consultation/sessions', {
         method: 'POST',
+        body: JSON.stringify(input ?? {}),
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['sessions'] });

@@ -59,7 +59,7 @@ function WaitingScreen({
           <Button
             onClick={async () => {
               try {
-                const newSession = await startSession.mutateAsync();
+                const newSession = await startSession.mutateAsync({});
                 router.push(`/consultation/${newSession.id}`);
               } catch {
                 toast.error('Failed to start a new consultation');
@@ -339,7 +339,7 @@ function FailedScreen() {
         <Button
           onClick={async () => {
             try {
-              const s = await startSession.mutateAsync();
+              const s = await startSession.mutateAsync({});
               router.push(`/consultation/${s.id}`);
             } catch {
               toast.error('Failed to start a new consultation');
@@ -375,10 +375,12 @@ function QuestionFlow({
   sessionId,
   question,
   progress,
+  scopeLabel,
 }: {
   sessionId: string;
   question: SessionQuestion;
   progress: { answered: number; total: number };
+  scopeLabel?: string | null;
 }) {
   const [answer, setAnswer] = useState<string | string[] | number | null>(null);
   const [showCheck, setShowCheck] = useState(false);
@@ -447,6 +449,7 @@ function QuestionFlow({
           answered={progress.answered}
           total={progress.total}
           section={question.section}
+          scopeLabel={scopeLabel}
         />
 
         <AnimatePresence mode="wait" custom={direction}>
@@ -591,11 +594,21 @@ export default function ConsultationPage() {
 
   // IN_PROGRESS
   if (status === 'IN_PROGRESS' && currentQuestion?.question) {
+    const scopeLabel =
+      session?.scope === 'WORKFLOW' && session.workflow
+        ? `${session.workflow.name}${
+            session.department ? ` · ${session.department.name}` : ''
+          }`
+        : session?.scope === 'DEPARTMENT' && session.department
+          ? session.department.name
+          : null;
+
     return (
       <QuestionFlow
         sessionId={sessionId}
         question={currentQuestion.question}
         progress={currentQuestion.progress}
+        scopeLabel={scopeLabel}
       />
     );
   }

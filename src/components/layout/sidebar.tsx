@@ -11,6 +11,7 @@ import {
   Layers,
   Settings,
   FileText,
+  MessageSquare,
   LogOut,
   Menu,
   X,
@@ -34,6 +35,7 @@ interface NavItem {
 const navItems: NavItem[] = [
   { label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
   { label: 'Company Profile', href: '/company-profile', icon: Building2 },
+  { label: 'Consultations', href: '/consultations', icon: MessageSquare },
   { label: 'Departments', href: '/departments', icon: Network },
   { label: 'Tracker', href: '/tracker', icon: KanbanSquare },
   { label: 'Implementation', href: '/implementation', icon: Rocket },

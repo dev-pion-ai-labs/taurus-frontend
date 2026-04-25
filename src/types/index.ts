@@ -56,12 +56,19 @@ export interface TemplateQuestion {
   metadata: unknown;
 }
 
+export type ConsultationScope = 'ORG' | 'DEPARTMENT' | 'WORKFLOW';
+
 // Sessions
 export interface ConsultationSession {
   id: string;
   organizationId: string;
   userId: string;
   status: 'PENDING_TEMPLATE' | 'IN_PROGRESS' | 'COMPLETED' | 'ABANDONED' | 'FAILED';
+  scope: ConsultationScope;
+  departmentId: string | null;
+  workflowId: string | null;
+  department?: { id: string; name: string } | null;
+  workflow?: { id: string; name: string; departmentId: string } | null;
   startedAt: string;
   completedAt: string | null;
   questions: SessionQuestion[];
@@ -72,6 +79,12 @@ export interface ConsultationSession {
     id: string;
     status: ReportStatus;
   } | null;
+}
+
+export interface StartSessionInput {
+  scope?: ConsultationScope;
+  departmentId?: string;
+  workflowId?: string;
 }
 
 export interface SessionQuestion {
