@@ -28,6 +28,10 @@ import {
   Target,
   TrendingUp,
   LayoutDashboard,
+  KanbanSquare,
+  Rocket,
+  CheckCircle2,
+  Clock,
 } from 'lucide-react';
 import { HeaderAuthActions } from '@/components/shared/header-auth-actions';
 
@@ -869,6 +873,221 @@ export default function HomePage() {
       </section>
 
       {/* ============================================================ */}
+      {/*  SECTION 4.5: PRODUCT MOCKUPS — SEE IT IN ACTION             */}
+      {/* ============================================================ */}
+      <section
+        id="product"
+        className="relative z-10"
+        style={{
+          background: 'linear-gradient(180deg, #FFFFFF 0%, #FAFAF9 100%)',
+          paddingTop: 100,
+          paddingBottom: 100,
+        }}
+      >
+        <div className="max-w-[1200px] mx-auto px-6">
+          <motion.div
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, margin: '-80px' }}
+            variants={staggerContainer}
+          >
+            <motion.div
+              variants={fadeUp}
+              transition={{ duration: 0.6 }}
+              className="text-center mb-4"
+            >
+              <span
+                className="inline-block px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wider"
+                style={{ backgroundColor: '#FFF1F2', color: '#E11D48' }}
+              >
+                See it in action
+              </span>
+            </motion.div>
+            <motion.h2
+              variants={fadeUp}
+              transition={{ duration: 0.6 }}
+              className="text-center font-bold mb-4"
+              style={{
+                fontSize: 'clamp(28px, 4vw, 40px)',
+                color: '#1C1917',
+              }}
+            >
+              The platform your team actually uses
+            </motion.h2>
+            <motion.p
+              variants={fadeUp}
+              transition={{ duration: 0.6 }}
+              className="text-center mx-auto mb-16 max-w-[640px]"
+              style={{ fontSize: 16, color: '#78716C', lineHeight: 1.7 }}
+            >
+              Three interfaces. One operating system. From the first
+              consultation question to the last deployed action — every
+              decision lives in one place.
+            </motion.p>
+
+            {/* Row 1 — Consultation (text left, mockup right) */}
+            <motion.div
+              variants={fadeUp}
+              transition={{ duration: 0.6 }}
+              className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-center mb-24"
+            >
+              <div className="lg:col-span-5 order-2 lg:order-1">
+                <div
+                  className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold mb-5"
+                  style={{ backgroundColor: '#F5F5F4', color: '#1C1917' }}
+                >
+                  <MessageSquare className="w-3.5 h-3.5" />
+                  Consultation
+                </div>
+                <h3
+                  className="text-2xl md:text-3xl font-bold mb-4"
+                  style={{ color: '#1C1917' }}
+                >
+                  An adaptive interview that actually listens
+                </h3>
+                <p
+                  className="leading-relaxed mb-6"
+                  style={{ fontSize: 15, color: '#78716C', lineHeight: 1.75 }}
+                >
+                  Run consultations at three levels — organisation, department,
+                  or a single workflow. Questions are generated from your real
+                  data and tighten as you answer. No generic forms.
+                </p>
+                <ul className="space-y-2.5">
+                  {[
+                    'Org / Department / Workflow scopes',
+                    'Industry-specific question banks',
+                    'Adaptive follow-ups grounded in your answers',
+                  ].map((item) => (
+                    <li
+                      key={item}
+                      className="flex items-start gap-2.5 text-sm"
+                      style={{ color: '#57534E' }}
+                    >
+                      <CheckCircle2
+                        className="w-4 h-4 shrink-0 mt-0.5"
+                        style={{ color: '#0D9488' }}
+                      />
+                      {item}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+              <div className="lg:col-span-7 order-1 lg:order-2">
+                <ConsultationMockup />
+              </div>
+            </motion.div>
+
+            {/* Row 2 — Tracker (mockup left, text right) */}
+            <motion.div
+              variants={fadeUp}
+              transition={{ duration: 0.6 }}
+              className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-center mb-24"
+            >
+              <div className="lg:col-span-7 order-1">
+                <TrackerMockup />
+              </div>
+              <div className="lg:col-span-5 order-2">
+                <div
+                  className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold mb-5"
+                  style={{ backgroundColor: '#F5F5F4', color: '#1C1917' }}
+                >
+                  <KanbanSquare className="w-3.5 h-3.5" />
+                  Tracker
+                </div>
+                <h3
+                  className="text-2xl md:text-3xl font-bold mb-4"
+                  style={{ color: '#1C1917' }}
+                >
+                  Every recommendation, on a kanban board
+                </h3>
+                <p
+                  className="leading-relaxed mb-6"
+                  style={{ fontSize: 15, color: '#78716C', lineHeight: 1.75 }}
+                >
+                  Recommendations from the report don&apos;t sit in a PDF —
+                  they land as actions on a board with owners, value, and
+                  status. Your AI roadmap becomes a Monday-morning standup.
+                </p>
+                <ul className="space-y-2.5">
+                  {[
+                    'Auto-imported from every report',
+                    'Stall alerts when actions sit too long',
+                    'Per-action $ value rolls up to portfolio',
+                  ].map((item) => (
+                    <li
+                      key={item}
+                      className="flex items-start gap-2.5 text-sm"
+                      style={{ color: '#57534E' }}
+                    >
+                      <CheckCircle2
+                        className="w-4 h-4 shrink-0 mt-0.5"
+                        style={{ color: '#0D9488' }}
+                      />
+                      {item}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </motion.div>
+
+            {/* Row 3 — Implementation (text left, mockup right) */}
+            <motion.div
+              variants={fadeUp}
+              transition={{ duration: 0.6 }}
+              className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-center"
+            >
+              <div className="lg:col-span-5 order-2 lg:order-1">
+                <div
+                  className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold mb-5"
+                  style={{ backgroundColor: '#F5F5F4', color: '#1C1917' }}
+                >
+                  <Rocket className="w-3.5 h-3.5" />
+                  Implementation
+                </div>
+                <h3
+                  className="text-2xl md:text-3xl font-bold mb-4"
+                  style={{ color: '#1C1917' }}
+                >
+                  From decision to deployed in weeks, not quarters
+                </h3>
+                <p
+                  className="leading-relaxed mb-6"
+                  style={{ fontSize: 15, color: '#78716C', lineHeight: 1.75 }}
+                >
+                  Each approved action gets a generated plan with concrete
+                  deployment steps, owners, and proof points. Run the steps —
+                  the engine watches the signal.
+                </p>
+                <ul className="space-y-2.5">
+                  {[
+                    'AI-generated plans per action',
+                    'Step-by-step with owners + dependencies',
+                    'Proof-point tracking against measurable thresholds',
+                  ].map((item) => (
+                    <li
+                      key={item}
+                      className="flex items-start gap-2.5 text-sm"
+                      style={{ color: '#57534E' }}
+                    >
+                      <CheckCircle2
+                        className="w-4 h-4 shrink-0 mt-0.5"
+                        style={{ color: '#0D9488' }}
+                      />
+                      {item}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+              <div className="lg:col-span-7 order-1 lg:order-2">
+                <ImplementationMockup />
+              </div>
+            </motion.div>
+          </motion.div>
+        </div>
+      </section>
+
+      {/* ============================================================ */}
       {/*  SECTION 5: PRICING                                          */}
       {/* ============================================================ */}
       <section
@@ -925,7 +1144,7 @@ export default function HomePage() {
                 <PricingCard plan={pricingPlans.starter} variant="light" />
               </motion.div>
 
-              {/* Enterprise */}
+              {/* Professional */}
               <motion.div
                 variants={fadeUp}
                 transition={{ duration: 0.5 }}
@@ -935,11 +1154,11 @@ export default function HomePage() {
                   borderColor: '#E7E5E4',
                 }}
               >
-                <PricingCard plan={pricingPlans.enterprise} variant="light" />
+                <PricingCard plan={pricingPlans.professional} variant="light" />
               </motion.div>
             </motion.div>
 
-            {/* Professional - featured dark card */}
+            {/* Enterprise - featured dark card */}
             <motion.div
               variants={fadeUp}
               transition={{ duration: 0.5 }}
@@ -952,7 +1171,7 @@ export default function HomePage() {
               >
                 Most Popular
               </div>
-              <PricingCard plan={pricingPlans.professional} variant="dark" />
+              <PricingCard plan={pricingPlans.enterprise} variant="dark" />
             </motion.div>
           </motion.div>
         </div>
@@ -2136,6 +2355,588 @@ function PricingCard({
             </li>
           ))}
         </ul>
+      </div>
+    </div>
+  );
+}
+
+/* ================================================================== */
+/*  CONSULTATION MOCKUP                                                */
+/* ================================================================== */
+function ConsultationMockup() {
+  return (
+    <div className="relative">
+      {/* Glow / shadow halo */}
+      <div
+        className="absolute -inset-4 rounded-3xl blur-3xl opacity-50"
+        style={{
+          background:
+            'linear-gradient(135deg, rgba(254,202,202,0.6), rgba(254,243,199,0.6))',
+        }}
+      />
+
+      {/* Browser chrome */}
+      <div
+        className="relative rounded-2xl border overflow-hidden shadow-2xl"
+        style={{ borderColor: '#E7E5E4', backgroundColor: '#FFFFFF' }}
+      >
+        <div
+          className="h-9 flex items-center gap-2 px-4 border-b"
+          style={{ backgroundColor: '#FAFAF9', borderColor: '#E7E5E4' }}
+        >
+          <div className="flex gap-1.5">
+            <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: '#FCA5A5' }} />
+            <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: '#FCD34D' }} />
+            <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: '#86EFAC' }} />
+          </div>
+          <div
+            className="flex-1 mx-3 px-3 py-0.5 rounded-md text-[11px] font-medium truncate"
+            style={{ backgroundColor: '#F5F5F4', color: '#78716C' }}
+          >
+            taurus.ai/consultation/c8a4-9f3e
+          </div>
+        </div>
+
+        {/* Body */}
+        <div className="p-8 md:p-10" style={{ backgroundColor: '#FFFFFF' }}>
+          {/* Scope chip */}
+          <div className="flex items-center gap-2 mb-5">
+            <span
+              className="text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full"
+              style={{ backgroundColor: '#FFF1F2', color: '#E11D48' }}
+            >
+              Consulting on
+            </span>
+            <span className="text-xs font-semibold" style={{ color: '#1C1917' }}>
+              Customer Success · Renewal workflow
+            </span>
+          </div>
+
+          {/* Section + progress */}
+          <div className="flex items-center justify-between mb-2">
+            <span
+              className="text-[10px] font-bold uppercase tracking-wider"
+              style={{ color: '#0D9488' }}
+            >
+              Personalized
+            </span>
+            <span className="text-xs font-medium" style={{ color: '#78716C' }}>
+              Question 5 of 8
+            </span>
+          </div>
+          <div
+            className="h-1.5 rounded-full mb-7 overflow-hidden"
+            style={{ backgroundColor: '#F5F5F4' }}
+          >
+            <div
+              className="h-full rounded-full"
+              style={{ width: '62%', backgroundColor: '#1C1917' }}
+            />
+          </div>
+
+          {/* Question */}
+          <h4
+            className="text-lg md:text-xl font-semibold leading-snug mb-6"
+            style={{ color: '#1C1917' }}
+          >
+            What share of the renewal workflow is currently handled manually
+            by the CS team each week?
+          </h4>
+
+          {/* Options */}
+          <div className="space-y-2.5 mb-8">
+            {[
+              { label: 'Less than 25% — mostly automated', selected: false },
+              { label: '25–50% — partial automation', selected: false },
+              { label: '50–75% — mostly manual', selected: true },
+              { label: 'More than 75% — fully manual', selected: false },
+            ].map((opt) => (
+              <div
+                key={opt.label}
+                className="flex items-center gap-3 px-4 py-3 rounded-xl border transition-all cursor-default"
+                style={{
+                  borderColor: opt.selected ? '#1C1917' : '#E7E5E4',
+                  backgroundColor: opt.selected ? '#FAFAF9' : '#FFFFFF',
+                }}
+              >
+                <div
+                  className="w-4 h-4 rounded-full border-2 flex items-center justify-center shrink-0"
+                  style={{
+                    borderColor: opt.selected ? '#1C1917' : '#D6D3D1',
+                  }}
+                >
+                  {opt.selected && (
+                    <div
+                      className="w-2 h-2 rounded-full"
+                      style={{ backgroundColor: '#1C1917' }}
+                    />
+                  )}
+                </div>
+                <span
+                  className="text-sm"
+                  style={{
+                    color: opt.selected ? '#1C1917' : '#57534E',
+                    fontWeight: opt.selected ? 600 : 400,
+                  }}
+                >
+                  {opt.label}
+                </span>
+              </div>
+            ))}
+          </div>
+
+          {/* CTA */}
+          <div className="flex items-center justify-between">
+            <button
+              className="text-xs font-medium"
+              style={{ color: '#A8A29E' }}
+            >
+              Skip
+            </button>
+            <button
+              className="px-5 py-2.5 rounded-lg text-sm font-semibold flex items-center gap-2"
+              style={{ backgroundColor: '#1C1917', color: '#FFFFFF' }}
+            >
+              Next
+              <ArrowRight className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ================================================================== */
+/*  TRACKER MOCKUP                                                     */
+/* ================================================================== */
+function TrackerMockup() {
+  const columns = [
+    {
+      title: 'This Sprint',
+      count: 3,
+      cards: [
+        {
+          title: 'Automate AP invoice triage',
+          dept: 'Finance',
+          value: '$240K',
+          priority: 'HIGH',
+          priorityColor: '#EF4444',
+        },
+        {
+          title: 'Deploy CS renewal model',
+          dept: 'Customer Success',
+          value: '$1.2M',
+          priority: 'CRITICAL',
+          priorityColor: '#DC2626',
+        },
+      ],
+    },
+    {
+      title: 'In Progress',
+      count: 2,
+      cards: [
+        {
+          title: 'Sales pipeline scoring',
+          dept: 'Sales',
+          value: '$680K',
+          priority: 'HIGH',
+          priorityColor: '#EF4444',
+          progress: 60,
+        },
+        {
+          title: 'Onboarding doc parser',
+          dept: 'Operations',
+          value: '$95K',
+          priority: 'MEDIUM',
+          priorityColor: '#F59E0B',
+          progress: 30,
+        },
+      ],
+    },
+    {
+      title: 'Deployed',
+      count: 4,
+      cards: [
+        {
+          title: 'Marketing copy generator',
+          dept: 'Marketing',
+          value: '$120K',
+          priority: 'MEDIUM',
+          priorityColor: '#F59E0B',
+          deployed: true,
+        },
+        {
+          title: 'Inbound lead router',
+          dept: 'Sales',
+          value: '$340K',
+          priority: 'HIGH',
+          priorityColor: '#EF4444',
+          deployed: true,
+        },
+      ],
+    },
+  ];
+
+  return (
+    <div className="relative">
+      <div
+        className="absolute -inset-4 rounded-3xl blur-3xl opacity-50"
+        style={{
+          background:
+            'linear-gradient(135deg, rgba(254,243,199,0.7), rgba(253,230,138,0.5))',
+        }}
+      />
+
+      <div
+        className="relative rounded-2xl border overflow-hidden shadow-2xl"
+        style={{ borderColor: '#E7E5E4', backgroundColor: '#FFFFFF' }}
+      >
+        {/* Top bar */}
+        <div
+          className="h-9 flex items-center gap-2 px-4 border-b"
+          style={{ backgroundColor: '#FAFAF9', borderColor: '#E7E5E4' }}
+        >
+          <div className="flex gap-1.5">
+            <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: '#FCA5A5' }} />
+            <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: '#FCD34D' }} />
+            <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: '#86EFAC' }} />
+          </div>
+          <div
+            className="flex-1 mx-3 px-3 py-0.5 rounded-md text-[11px] font-medium truncate"
+            style={{ backgroundColor: '#F5F5F4', color: '#78716C' }}
+          >
+            taurus.ai/tracker
+          </div>
+        </div>
+
+        {/* Header + stats */}
+        <div className="p-5 border-b" style={{ borderColor: '#E7E5E4' }}>
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <KanbanSquare className="w-4 h-4" style={{ color: '#1C1917' }} />
+              <span className="text-sm font-bold" style={{ color: '#1C1917' }}>
+                Transformation Tracker
+              </span>
+            </div>
+            <button
+              className="px-2.5 py-1 rounded-md text-[11px] font-semibold flex items-center gap-1.5"
+              style={{ backgroundColor: '#1C1917', color: '#FFFFFF' }}
+            >
+              <Sparkles className="w-3 h-3" />
+              Suggest next action
+            </button>
+          </div>
+          <div className="grid grid-cols-4 gap-2">
+            {[
+              { label: 'Total actions', value: '24', color: '#1C1917' },
+              { label: 'Portfolio value', value: '$4.6M', color: '#0D9488' },
+              { label: 'In progress', value: '8', color: '#F59E0B' },
+              { label: 'Deployed', value: '6', color: '#0D9488' },
+            ].map((stat) => (
+              <div
+                key={stat.label}
+                className="p-2.5 rounded-lg"
+                style={{ backgroundColor: '#FAFAF9' }}
+              >
+                <p className="text-[9px] uppercase tracking-wide font-medium" style={{ color: '#A8A29E' }}>
+                  {stat.label}
+                </p>
+                <p className="text-base font-bold mt-0.5" style={{ color: stat.color }}>
+                  {stat.value}
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Board */}
+        <div className="grid grid-cols-3 gap-3 p-5" style={{ backgroundColor: '#FAFAF9' }}>
+          {columns.map((col) => (
+            <div key={col.title} className="flex flex-col gap-2">
+              <div className="flex items-center justify-between px-1 mb-1">
+                <span className="text-[11px] font-bold uppercase tracking-wider" style={{ color: '#1C1917' }}>
+                  {col.title}
+                </span>
+                <span
+                  className="text-[10px] font-semibold px-1.5 rounded-full"
+                  style={{ backgroundColor: '#E7E5E4', color: '#57534E' }}
+                >
+                  {col.count}
+                </span>
+              </div>
+              {col.cards.map((card) => (
+                <div
+                  key={card.title}
+                  className="rounded-lg border p-3"
+                  style={{ backgroundColor: '#FFFFFF', borderColor: '#E7E5E4' }}
+                >
+                  <p
+                    className="text-[12px] font-semibold leading-snug mb-2"
+                    style={{
+                      color: '#1C1917',
+                      textDecoration: 'deployed' in card && card.deployed ? 'line-through' : 'none',
+                      opacity: 'deployed' in card && card.deployed ? 0.6 : 1,
+                    }}
+                  >
+                    {card.title}
+                  </p>
+                  <div className="flex items-center gap-1.5 flex-wrap mb-2">
+                    <span
+                      className="text-[9px] font-bold px-1.5 py-0.5 rounded"
+                      style={{
+                        backgroundColor: card.priorityColor + '20',
+                        color: card.priorityColor,
+                      }}
+                    >
+                      {card.priority}
+                    </span>
+                    <span className="text-[10px]" style={{ color: '#78716C' }}>
+                      {card.dept}
+                    </span>
+                  </div>
+                  {'progress' in card && card.progress != null && (
+                    <div
+                      className="h-1 rounded-full overflow-hidden mb-2"
+                      style={{ backgroundColor: '#F5F5F4' }}
+                    >
+                      <div
+                        className="h-full rounded-full"
+                        style={{ width: `${card.progress}%`, backgroundColor: '#F59E0B' }}
+                      />
+                    </div>
+                  )}
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-bold" style={{ color: '#0D9488' }}>
+                      {card.value}
+                    </span>
+                    <div
+                      className="w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-medium"
+                      style={{ backgroundColor: '#F5F5F4', color: '#57534E' }}
+                    >
+                      JK
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ================================================================== */
+/*  IMPLEMENTATION MOCKUP                                              */
+/* ================================================================== */
+function ImplementationMockup() {
+  const plans = [
+    { title: 'CS renewal model', status: 'In progress', selected: true, color: '#F59E0B' },
+    { title: 'AP invoice triage', status: 'Approved', selected: false, color: '#0D9488' },
+    { title: 'Lead router v2', status: 'Draft', selected: false, color: '#A8A29E' },
+  ];
+
+  const steps = [
+    {
+      title: 'Provision data pipeline',
+      owner: 'Data Eng',
+      week: 'Week 1',
+      status: 'done',
+    },
+    {
+      title: 'Train v0 retention model',
+      owner: 'ML Eng',
+      week: 'Week 2',
+      status: 'done',
+    },
+    {
+      title: 'Wire CRM webhook',
+      owner: 'Platform',
+      week: 'Week 3',
+      status: 'progress',
+    },
+    {
+      title: 'Shadow mode against last quarter',
+      owner: 'CS Ops',
+      week: 'Week 4',
+      status: 'pending',
+    },
+    {
+      title: 'Cut over with kill-switch',
+      owner: 'CS Lead',
+      week: 'Week 5',
+      status: 'pending',
+    },
+  ];
+
+  return (
+    <div className="relative">
+      <div
+        className="absolute -inset-4 rounded-3xl blur-3xl opacity-50"
+        style={{
+          background:
+            'linear-gradient(135deg, rgba(220,252,231,0.7), rgba(186,230,253,0.5))',
+        }}
+      />
+
+      <div
+        className="relative rounded-2xl border overflow-hidden shadow-2xl"
+        style={{ borderColor: '#E7E5E4', backgroundColor: '#FFFFFF' }}
+      >
+        {/* Top bar */}
+        <div
+          className="h-9 flex items-center gap-2 px-4 border-b"
+          style={{ backgroundColor: '#FAFAF9', borderColor: '#E7E5E4' }}
+        >
+          <div className="flex gap-1.5">
+            <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: '#FCA5A5' }} />
+            <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: '#FCD34D' }} />
+            <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: '#86EFAC' }} />
+          </div>
+          <div
+            className="flex-1 mx-3 px-3 py-0.5 rounded-md text-[11px] font-medium truncate"
+            style={{ backgroundColor: '#F5F5F4', color: '#78716C' }}
+          >
+            taurus.ai/implementation
+          </div>
+        </div>
+
+        {/* Header */}
+        <div
+          className="px-5 py-4 border-b flex items-center justify-between"
+          style={{ borderColor: '#E7E5E4' }}
+        >
+          <div className="flex items-center gap-2">
+            <Rocket className="w-4 h-4" style={{ color: '#1C1917' }} />
+            <span className="text-sm font-bold" style={{ color: '#1C1917' }}>
+              Implementation Engine
+            </span>
+          </div>
+          <button
+            className="px-2.5 py-1 rounded-md text-[11px] font-semibold flex items-center gap-1.5 border"
+            style={{ borderColor: '#E7E5E4', color: '#1C1917' }}
+          >
+            <CheckCircle2 className="w-3 h-3" />
+            Approve plan
+          </button>
+        </div>
+
+        {/* Body — split */}
+        <div className="grid grid-cols-12">
+          {/* Plan list */}
+          <div
+            className="col-span-4 border-r p-3 space-y-1.5"
+            style={{ borderColor: '#E7E5E4', backgroundColor: '#FAFAF9' }}
+          >
+            <p className="text-[10px] font-bold uppercase tracking-wider px-2 mb-1.5" style={{ color: '#A8A29E' }}>
+              Plans
+            </p>
+            {plans.map((plan) => (
+              <div
+                key={plan.title}
+                className="rounded-lg p-2.5"
+                style={{
+                  backgroundColor: plan.selected ? '#FFFFFF' : 'transparent',
+                  border: plan.selected ? '1px solid #1C1917' : '1px solid transparent',
+                }}
+              >
+                <p
+                  className="text-[12px] font-semibold leading-tight mb-1"
+                  style={{ color: '#1C1917' }}
+                >
+                  {plan.title}
+                </p>
+                <div className="flex items-center gap-1.5">
+                  <div
+                    className="w-1.5 h-1.5 rounded-full"
+                    style={{ backgroundColor: plan.color }}
+                  />
+                  <span
+                    className="text-[10px] font-medium"
+                    style={{ color: plan.color }}
+                  >
+                    {plan.status}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Plan detail */}
+          <div className="col-span-8 p-5">
+            <div className="mb-4">
+              <h4 className="text-base font-bold mb-1" style={{ color: '#1C1917' }}>
+                CS renewal model
+              </h4>
+              <div className="flex items-center gap-2 text-[11px]" style={{ color: '#78716C' }}>
+                <span>5 steps</span>
+                <span>·</span>
+                <span style={{ color: '#0D9488', fontWeight: 600 }}>$1.2M annual value</span>
+                <span>·</span>
+                <span>Proof: NRR ≥ 105%</span>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              {steps.map((step, i) => (
+                <div
+                  key={step.title}
+                  className="flex items-center gap-3 rounded-lg border p-2.5"
+                  style={{
+                    borderColor: step.status === 'progress' ? '#F59E0B' : '#E7E5E4',
+                    backgroundColor:
+                      step.status === 'progress' ? '#FFFBEB' : '#FFFFFF',
+                  }}
+                >
+                  <div
+                    className="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0"
+                    style={{
+                      backgroundColor:
+                        step.status === 'done'
+                          ? '#0D9488'
+                          : step.status === 'progress'
+                          ? '#F59E0B'
+                          : '#E7E5E4',
+                      color: step.status === 'pending' ? '#A8A29E' : '#FFFFFF',
+                    }}
+                  >
+                    {step.status === 'done' ? (
+                      <Check className="w-3 h-3" />
+                    ) : step.status === 'progress' ? (
+                      <Clock className="w-3 h-3" />
+                    ) : (
+                      i + 1
+                    )}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p
+                      className="text-[12px] font-semibold"
+                      style={{
+                        color: step.status === 'pending' ? '#A8A29E' : '#1C1917',
+                      }}
+                    >
+                      {step.title}
+                    </p>
+                    <div className="flex items-center gap-2 text-[10px]" style={{ color: '#A8A29E' }}>
+                      <span>{step.owner}</span>
+                      <span>·</span>
+                      <span>{step.week}</span>
+                    </div>
+                  </div>
+                  {step.status === 'progress' && (
+                    <span
+                      className="text-[9px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wider"
+                      style={{ backgroundColor: '#F59E0B', color: '#FFFFFF' }}
+                    >
+                      Live
+                    </span>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );
