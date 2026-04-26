@@ -15,24 +15,26 @@ export function ProgressHeader({ answered, total, section, scopeLabel }: Progres
   const percentage = total > 0 ? (answered / total) * 100 : 0;
 
   return (
-    <div className="mb-8 space-y-3">
+    <div className="mb-10 space-y-4">
       {scopeLabel ? (
-        <div className="flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-[#78716C]">
-          <span className="rounded-full bg-[#FFF1F2] px-2.5 py-0.5 text-[#E11D48]">
+        <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+          <span className="rounded-full border border-accent-foreground/15 bg-accent px-2 py-0.5 text-accent-foreground">
             Consulting on
           </span>
-          <span className="text-[#1C1917]">{scopeLabel}</span>
+          <span className="truncate text-foreground">{scopeLabel}</span>
         </div>
       ) : null}
-      <div className="flex items-center justify-between">
+
+      <div className="flex items-center justify-between gap-4">
         <SectionIndicator section={section} />
-        <span className="text-sm font-medium text-[#78716C]">
-          Question {current} of {total}
+        <span className="text-xs font-medium tabular-nums text-muted-foreground">
+          <span className="text-foreground">{current}</span> / {total}
         </span>
       </div>
+
       <Progress
         value={percentage}
-        className="[&_[data-slot=progress-track]]:h-1.5 [&_[data-slot=progress-indicator]]:bg-[#1C1917] [&_[data-slot=progress-indicator]]:transition-all [&_[data-slot=progress-indicator]]:duration-500 [&_[data-slot=progress-indicator]]:ease-out"
+        className="h-1 [&_[data-slot=progress-track]]:bg-border/60 [&_[data-slot=progress-indicator]]:bg-foreground [&_[data-slot=progress-indicator]]:transition-all [&_[data-slot=progress-indicator]]:duration-500 [&_[data-slot=progress-indicator]]:ease-out"
       />
     </div>
   );

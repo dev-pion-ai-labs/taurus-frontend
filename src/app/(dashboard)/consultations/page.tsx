@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Loader2, MessageSquare, Network, Workflow as WorkflowIcon } from 'lucide-react';
@@ -49,8 +49,8 @@ export default function ConsultationsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-[#1C1917]">Consultations</h1>
-        <p className="mt-1 text-sm text-[#78716C]">
+        <h1 className="text-2xl font-bold text-foreground">Consultations</h1>
+        <p className="mt-1 text-sm text-muted-foreground">
           Run a consultation at the right level of detail — organisation, department, or a single workflow.
         </p>
       </div>
@@ -107,6 +107,7 @@ function OrgPanel() {
   return (
     <div className="space-y-6">
       <ScopeIntro
+        icon={<MessageSquare className="h-5 w-5" />}
         title={TAB_LABEL.ORG}
         description={TAB_DESCRIPTION.ORG}
         action={
@@ -164,10 +165,12 @@ function DepartmentPanel() {
   };
 
   const deptList = departments.data ?? [];
+  const selectedDept = deptList.find((d) => d.id === departmentId);
 
   return (
     <div className="space-y-6">
       <ScopeIntro
+        icon={<Network className="h-5 w-5" />}
         title={TAB_LABEL.DEPARTMENT}
         description={TAB_DESCRIPTION.DEPARTMENT}
         action={null}
@@ -189,7 +192,9 @@ function DepartmentPanel() {
                 onValueChange={(v) => setDepartmentId(v ?? '')}
               >
                 <SelectTrigger className="w-full max-w-md">
-                  <SelectValue placeholder="Select a department…" />
+                  <SelectValue placeholder="Select a department…">
+                    {selectedDept?.name}
+                  </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
                   {deptList.map((d: Department) => (
@@ -251,11 +256,9 @@ function WorkflowPanel() {
   });
 
   const deptList = departments.data ?? [];
-  const selectedDept = useMemo(
-    () => deptList.find((d) => d.id === departmentId),
-    [deptList, departmentId],
-  );
+  const selectedDept = deptList.find((d) => d.id === departmentId);
   const workflows: Workflow[] = selectedDept?.workflows ?? [];
+  const selectedWorkflow = workflows.find((w) => w.id === workflowId);
 
   const handleStart = () => {
     if (!departmentId || !workflowId) {
@@ -277,6 +280,7 @@ function WorkflowPanel() {
   return (
     <div className="space-y-6">
       <ScopeIntro
+        icon={<WorkflowIcon className="h-5 w-5" />}
         title={TAB_LABEL.WORKFLOW}
         description={TAB_DESCRIPTION.WORKFLOW}
         action={null}
@@ -302,7 +306,9 @@ function WorkflowPanel() {
                   }}
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="Department…" />
+                    <SelectValue placeholder="Department…">
+                      {selectedDept?.name}
+                    </SelectValue>
                   </SelectTrigger>
                   <SelectContent>
                     {deptList.map((d: Department) => (
@@ -327,7 +333,9 @@ function WorkflowPanel() {
                             ? 'No workflows in this department'
                             : 'Workflow…'
                       }
-                    />
+                    >
+                      {selectedWorkflow?.name}
+                    </SelectValue>
                   </SelectTrigger>
                   <SelectContent>
                     {workflows.map((w) => (
@@ -375,20 +383,30 @@ function WorkflowPanel() {
 // ---------------------------------------------------------------------------
 
 function ScopeIntro({
+  icon,
   title,
   description,
   action,
 }: {
+  icon: React.ReactNode;
   title: string;
   description: string;
   action: React.ReactNode;
 }) {
   return (
-    <Card>
+    <Card className="overflow-hidden">
       <CardContent className="flex flex-col gap-4 p-6 md:flex-row md:items-center md:justify-between">
-        <div className="max-w-2xl">
-          <h2 className="text-lg font-semibold text-[#1C1917]">{title} consultation</h2>
-          <p className="mt-1 text-sm text-[#78716C]">{description}</p>
+        <div className="flex max-w-2xl gap-4">
+          <span
+            aria-hidden
+            className="hidden h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-accent text-accent-foreground sm:inline-flex"
+          >
+            {icon}
+          </span>
+          <div>
+            <h2 className="text-lg font-semibold text-foreground">{title} consultation</h2>
+            <p className="mt-1 text-sm text-muted-foreground">{description}</p>
+          </div>
         </div>
         {action ? <div className="shrink-0">{action}</div> : null}
       </CardContent>
@@ -398,9 +416,9 @@ function ScopeIntro({
 
 function EmptyDepartmentsHint() {
   return (
-    <div className="rounded-lg border border-dashed border-[#E7E5E4] bg-[#FAFAF9] p-6 text-center text-sm text-[#78716C]">
+    <div className="rounded-lg border border-dashed border-border bg-muted/40 p-6 text-center text-sm text-muted-foreground">
       You haven’t mapped any departments yet.{' '}
-      <Link className="font-medium text-[#E11D48] hover:underline" href="/departments">
+      <Link className="font-medium text-accent-foreground hover:underline" href="/departments">
         Add departments and workflows
       </Link>{' '}
       first, then come back to start a scoped consultation.
@@ -429,20 +447,20 @@ function SessionList({
             <Skeleton className="h-10 w-full" />
           </div>
         ) : sessions.length === 0 ? (
-          <p className="text-sm text-[#78716C]">No consultations yet at this scope.</p>
+          <p className="text-sm text-muted-foreground">No consultations yet at this scope.</p>
         ) : (
-          <ul className="divide-y divide-[#E7E5E4]">
+          <ul className="divide-y divide-border">
             {sessions.map((s) => (
               <li key={s.id}>
                 <Link
                   href={`/consultation/${s.id}`}
-                  className="flex items-center justify-between gap-4 py-3 text-sm hover:bg-[#FAFAF9]"
+                  className="flex items-center justify-between gap-4 py-3 text-sm hover:bg-muted/40"
                 >
                   <div className="min-w-0">
-                    <div className="font-medium text-[#1C1917]">
+                    <div className="font-medium text-foreground">
                       {scopeTitle(s)}
                     </div>
-                    <div className="truncate text-xs text-[#78716C]">
+                    <div className="truncate text-xs text-muted-foreground">
                       Started {new Date(s.startedAt).toLocaleString()}
                       {s._count?.questions ? ` · ${s._count.questions} questions` : ''}
                     </div>
