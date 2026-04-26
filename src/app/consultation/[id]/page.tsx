@@ -4,7 +4,7 @@ import { useState, useCallback, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Check, ArrowRight, Loader2, RotateCcw, AlertTriangle } from 'lucide-react';
+import { Check, ArrowRight, Loader2, RotateCcw, AlertTriangle, Sparkles } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { ProgressHeader } from '@/components/consultation/progress-header';
@@ -23,7 +23,6 @@ import type { SessionQuestion } from '@/types';
 /*  Waiting screen — PENDING_TEMPLATE                                  */
 /* ------------------------------------------------------------------ */
 function WaitingScreen({
-  sessionId,
   startedAt,
 }: {
   sessionId: string;
@@ -33,7 +32,6 @@ function WaitingScreen({
   const [timedOut, setTimedOut] = useState(false);
   const startSession = useStartSession();
 
-  // Time out after 2 minutes of waiting
   useEffect(() => {
     const elapsed = Date.now() - new Date(startedAt).getTime();
     const remaining = Math.max(0, 120_000 - elapsed);
@@ -43,19 +41,12 @@ function WaitingScreen({
 
   if (timedOut) {
     return (
-      <div className="flex min-h-[60vh] flex-col items-center justify-center text-center">
-        <div className="mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-[#FEF2F2]">
-          <AlertTriangle className="h-7 w-7 text-[#EF4444]" />
-        </div>
-        <h2 className="mb-2 text-xl font-semibold text-[#1C1917]">
-          Generation is taking longer than expected
-        </h2>
-        <p className="mb-8 max-w-md text-[15px] leading-relaxed text-[#78716C]">
-          We weren&apos;t able to generate your industry-specific questions.
-          This could be a temporary issue. You can try starting a new
-          consultation or go back to the dashboard.
-        </p>
-        <div className="flex flex-col items-center gap-3">
+      <StatusScreen
+        icon={<AlertTriangle className="h-7 w-7 text-destructive" />}
+        iconBg="bg-destructive/10"
+        title="Generation is taking longer than expected"
+        description="We weren't able to generate your industry-specific questions. This could be a temporary issue. You can try starting a new consultation or go back to the dashboard."
+        primary={
           <Button
             onClick={async () => {
               try {
@@ -66,42 +57,40 @@ function WaitingScreen({
               }
             }}
             disabled={startSession.isPending}
-            className="h-10 rounded-full bg-[#1C1917] px-6 text-sm font-medium text-white hover:bg-[#1C1917]/90"
+            className="h-10 rounded-full px-6"
           >
             {startSession.isPending ? (
               <span className="flex items-center gap-2">
                 <Loader2 className="h-4 w-4 animate-spin" />
-                Starting...
+                Starting…
               </span>
             ) : (
               'Try New Consultation'
             )}
           </Button>
-          <Link
-            href="/dashboard"
-            className="text-sm font-medium text-[#78716C] underline-offset-4 transition-colors hover:text-[#1C1917] hover:underline"
-          >
-            Back to Dashboard
-          </Link>
-        </div>
-      </div>
+        }
+        secondary={<DashboardLink />}
+      />
     );
   }
 
   return (
     <div className="flex min-h-[60vh] flex-col items-center justify-center text-center">
-      {/* Animated spinner + pulse ring */}
       <div className="relative mb-8">
-        <div className="h-16 w-16 rounded-full border-2 border-[#E7E5E4]" />
-        <div className="absolute inset-0 h-16 w-16 animate-spin rounded-full border-2 border-transparent border-t-[#1C1917]" />
-        <div className="absolute -inset-3 animate-pulse rounded-full border border-[#E7E5E4]/50" />
+        <div className="h-16 w-16 rounded-full border-2 border-border" />
+        <div className="absolute inset-0 h-16 w-16 animate-spin rounded-full border-2 border-transparent border-t-foreground" />
+        <div className="absolute -inset-3 animate-pulse rounded-full border border-border/60" />
       </div>
-      <h2 className="mb-2 text-xl font-semibold text-[#1C1917]">
+      <div className="mb-2 inline-flex items-center gap-1.5 rounded-full border border-accent-foreground/15 bg-accent px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-accent-foreground">
+        <Sparkles className="h-3 w-3" />
+        Personalising
+      </div>
+      <h2 className="mt-3 mb-2 text-xl font-semibold text-foreground">
         Preparing your consultation
       </h2>
-      <p className="max-w-sm text-[15px] leading-relaxed text-[#78716C]">
-        We&apos;re generating industry-specific questions for your consultation.
-        This usually takes less than a minute.
+      <p className="max-w-sm text-[15px] leading-relaxed text-muted-foreground">
+        We&apos;re generating industry-specific questions tailored to your
+        organisation. This usually takes less than a minute.
       </p>
     </div>
   );
@@ -123,7 +112,7 @@ function CompletedScreen({
 }) {
   const router = useRouter();
   const { data: user } = useMe();
-  const { data: reportData, isError: reportError } = useReport(sessionId);
+  const { data: reportData } = useReport(sessionId);
   const regenerateReport = useRegenerateReport(sessionId);
 
   const isAdmin = user?.role === 'ADMIN';
@@ -137,12 +126,9 @@ function CompletedScreen({
     return `${minutes} minutes`;
   })();
 
-  // Determine report state
   const reportStatus = reportData?.status ?? null;
 
-  // Render the report section based on status
   const renderReportSection = () => {
-    // COMPLETED — show CTA button to view the roadmap
     if (reportStatus === 'COMPLETED') {
       return (
         <motion.div
@@ -152,7 +138,7 @@ function CompletedScreen({
           className="mb-8"
         >
           <Link href={`/consultation/${sessionId}/report`}>
-            <Button className="h-11 rounded-full bg-[#1C1917] px-8 text-sm font-medium text-white hover:bg-[#1C1917]/90">
+            <Button className="h-11 rounded-full px-8">
               View Your Transformation Roadmap
               <ArrowRight className="ml-2 h-4 w-4" />
             </Button>
@@ -161,28 +147,15 @@ function CompletedScreen({
       );
     }
 
-    // GENERATING — show loading animation
     if (reportStatus === 'GENERATING') {
-      return (
-        <div className="mb-8 rounded-lg border border-[#E7E5E4] bg-white px-5 py-4">
-          <p className="text-sm text-[#78716C]">
-            Your Transformation Roadmap is being generated...
-          </p>
-          <div className="mt-3 flex items-center justify-center gap-1.5">
-            <div className="h-1.5 w-1.5 animate-pulse rounded-full bg-[#0D9488]" />
-            <div className="h-1.5 w-1.5 animate-pulse rounded-full bg-[#0D9488] [animation-delay:150ms]" />
-            <div className="h-1.5 w-1.5 animate-pulse rounded-full bg-[#0D9488] [animation-delay:300ms]" />
-          </div>
-        </div>
-      );
+      return <ReportPlaceholder text="Your Transformation Roadmap is being generated…" />;
     }
 
-    // FAILED — show error with optional retry for admins
     if (reportStatus === 'FAILED') {
       return (
-        <div className="mb-8 rounded-lg border border-[#E7E5E4] bg-white px-5 py-4">
+        <div className="mb-8 rounded-xl border border-border bg-card px-5 py-4 shadow-xs">
           <div className="flex flex-col items-center gap-3">
-            <div className="flex items-center gap-2 text-[#dc2626]">
+            <div className="flex items-center gap-2 text-destructive">
               <AlertTriangle className="h-4 w-4" />
               <p className="text-sm font-medium">Report generation failed</p>
             </div>
@@ -193,9 +166,7 @@ function CompletedScreen({
                 disabled={regenerateReport.isPending}
                 onClick={() => {
                   regenerateReport.mutate(undefined, {
-                    onError: () => {
-                      toast.error('Failed to regenerate report');
-                    },
+                    onError: () => toast.error('Failed to regenerate report'),
                   });
                 }}
                 className="rounded-full px-4 text-xs"
@@ -203,7 +174,7 @@ function CompletedScreen({
                 {regenerateReport.isPending ? (
                   <span className="flex items-center gap-2">
                     <Loader2 className="h-3 w-3 animate-spin" />
-                    Regenerating...
+                    Regenerating…
                   </span>
                 ) : (
                   'Try Again'
@@ -215,29 +186,16 @@ function CompletedScreen({
       );
     }
 
-    // No report found / error — show the original placeholder
-    return (
-      <div className="mb-8 rounded-lg border border-[#E7E5E4] bg-white px-5 py-4">
-        <p className="text-sm text-[#78716C]">
-          Your AI transformation report is being generated...
-        </p>
-        <div className="mt-3 flex items-center justify-center gap-1.5">
-          <div className="h-1.5 w-1.5 animate-pulse rounded-full bg-[#0D9488]" />
-          <div className="h-1.5 w-1.5 animate-pulse rounded-full bg-[#0D9488] [animation-delay:150ms]" />
-          <div className="h-1.5 w-1.5 animate-pulse rounded-full bg-[#0D9488] [animation-delay:300ms]" />
-        </div>
-      </div>
-    );
+    return <ReportPlaceholder text="Your AI transformation report is being generated…" />;
   };
 
   return (
     <div className="flex min-h-[60vh] flex-col items-center justify-center text-center">
-      {/* Scale-in checkmark */}
       <motion.div
         initial={{ scale: 0, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
         transition={{ type: 'spring', stiffness: 200, damping: 15, delay: 0.1 }}
-        className="mb-8 flex h-20 w-20 items-center justify-center rounded-full bg-[#0D9488]"
+        className="mb-8 flex h-20 w-20 items-center justify-center rounded-full bg-chart-1 shadow-lg shadow-chart-1/20"
       >
         <Check className="h-10 w-10 text-white" strokeWidth={3} />
       </motion.div>
@@ -247,11 +205,11 @@ function CompletedScreen({
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.3 }}
       >
-        <h2 className="mb-2 text-2xl font-semibold text-[#1C1917]">
+        <h2 className="mb-2 text-2xl font-semibold text-foreground">
           Consultation Complete
         </h2>
 
-        <div className="mb-6 space-y-1 text-[15px] text-[#78716C]">
+        <div className="mb-6 space-y-1 text-[15px] text-muted-foreground">
           <p>{totalQuestions} questions answered</p>
           {timeTaken && <p>Time taken: {timeTaken}</p>}
         </div>
@@ -261,17 +219,14 @@ function CompletedScreen({
         <div className="flex flex-col items-center gap-3">
           <Button
             onClick={() => router.push('/dashboard')}
-            className={`h-10 rounded-full px-6 text-sm font-medium ${
-              reportStatus === 'COMPLETED'
-                ? 'border border-[#E7E5E4] bg-white text-[#1C1917] hover:bg-[#FAFAF9]'
-                : 'bg-[#1C1917] text-white hover:bg-[#1C1917]/90'
-            }`}
+            variant={reportStatus === 'COMPLETED' ? 'outline' : 'default'}
+            className="h-10 rounded-full px-6"
           >
             Back to Dashboard
           </Button>
           <Link
             href={`/consultation/${sessionId}/review`}
-            className="text-sm font-medium text-[#78716C] underline-offset-4 transition-colors hover:text-[#1C1917] hover:underline"
+            className="text-sm font-medium text-muted-foreground underline-offset-4 transition-colors hover:text-foreground hover:underline"
           >
             Review Answers
           </Link>
@@ -281,38 +236,40 @@ function CompletedScreen({
   );
 }
 
+function ReportPlaceholder({ text }: { text: string }) {
+  return (
+    <div className="mb-8 rounded-xl border border-border bg-card px-5 py-4 shadow-xs">
+      <p className="text-sm text-muted-foreground">{text}</p>
+      <div className="mt-3 flex items-center justify-center gap-1.5">
+        <div className="h-1.5 w-1.5 animate-pulse rounded-full bg-chart-1" />
+        <div className="h-1.5 w-1.5 animate-pulse rounded-full bg-chart-1 [animation-delay:150ms]" />
+        <div className="h-1.5 w-1.5 animate-pulse rounded-full bg-chart-1 [animation-delay:300ms]" />
+      </div>
+    </div>
+  );
+}
+
 /* ------------------------------------------------------------------ */
 /*  Abandoned screen                                                   */
 /* ------------------------------------------------------------------ */
 function AbandonedScreen() {
   const router = useRouter();
-
   return (
-    <div className="flex min-h-[60vh] flex-col items-center justify-center text-center">
-      <div className="mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-[#F5F5F4]">
-        <RotateCcw className="h-7 w-7 text-[#A8A29E]" />
-      </div>
-      <h2 className="mb-2 text-xl font-semibold text-[#1C1917]">
-        This consultation was abandoned
-      </h2>
-      <p className="mb-8 max-w-sm text-[15px] text-[#78716C]">
-        You can start a new consultation or return to your dashboard.
-      </p>
-      <div className="flex flex-col items-center gap-3">
+    <StatusScreen
+      icon={<RotateCcw className="h-7 w-7 text-stone-400" />}
+      iconBg="bg-muted"
+      title="This consultation was abandoned"
+      description="You can start a new consultation or return to your dashboard."
+      primary={
         <Button
           onClick={() => router.push('/dashboard')}
-          className="h-10 rounded-full bg-[#1C1917] px-6 text-sm font-medium text-white hover:bg-[#1C1917]/90"
+          className="h-10 rounded-full px-6"
         >
           Start New Consultation
         </Button>
-        <Link
-          href="/dashboard"
-          className="text-sm font-medium text-[#78716C] underline-offset-4 transition-colors hover:text-[#1C1917] hover:underline"
-        >
-          Back to Dashboard
-        </Link>
-      </div>
-    </div>
+      }
+      secondary={<DashboardLink />}
+    />
   );
 }
 
@@ -322,20 +279,13 @@ function AbandonedScreen() {
 function FailedScreen() {
   const router = useRouter();
   const startSession = useStartSession();
-
   return (
-    <div className="flex min-h-[60vh] flex-col items-center justify-center text-center">
-      <div className="mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-[#FEF2F2]">
-        <AlertTriangle className="h-7 w-7 text-[#EF4444]" />
-      </div>
-      <h2 className="mb-2 text-xl font-semibold text-[#1C1917]">
-        Something went wrong
-      </h2>
-      <p className="mb-8 max-w-md text-[15px] leading-relaxed text-[#78716C]">
-        We couldn&apos;t generate the questions for your consultation due to a
-        system error. Please try starting a new session.
-      </p>
-      <div className="flex flex-col items-center gap-3">
+    <StatusScreen
+      icon={<AlertTriangle className="h-7 w-7 text-destructive" />}
+      iconBg="bg-destructive/10"
+      title="Something went wrong"
+      description="We couldn't generate the questions for your consultation due to a system error. Please try starting a new session."
+      primary={
         <Button
           onClick={async () => {
             try {
@@ -346,25 +296,66 @@ function FailedScreen() {
             }
           }}
           disabled={startSession.isPending}
-          className="h-10 rounded-full bg-[#1C1917] px-6 text-sm font-medium text-white hover:bg-[#1C1917]/90"
+          className="h-10 rounded-full px-6"
         >
           {startSession.isPending ? (
             <span className="flex items-center gap-2">
               <Loader2 className="h-4 w-4 animate-spin" />
-              Starting...
+              Starting…
             </span>
           ) : (
             'Try New Consultation'
           )}
         </Button>
-        <Link
-          href="/dashboard"
-          className="text-sm font-medium text-[#78716C] underline-offset-4 transition-colors hover:text-[#1C1917] hover:underline"
-        >
-          Back to Dashboard
-        </Link>
+      }
+      secondary={<DashboardLink />}
+    />
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/*  Status screen wrapper — shared shell for waiting/abandoned/failed  */
+/* ------------------------------------------------------------------ */
+function StatusScreen({
+  icon,
+  iconBg,
+  title,
+  description,
+  primary,
+  secondary,
+}: {
+  icon: React.ReactNode;
+  iconBg: string;
+  title: string;
+  description: string;
+  primary: React.ReactNode;
+  secondary?: React.ReactNode;
+}) {
+  return (
+    <div className="flex min-h-[60vh] flex-col items-center justify-center text-center">
+      <div className={`mb-6 flex h-16 w-16 items-center justify-center rounded-full ${iconBg}`}>
+        {icon}
+      </div>
+      <h2 className="mb-2 text-xl font-semibold text-foreground">{title}</h2>
+      <p className="mb-8 max-w-md text-[15px] leading-relaxed text-muted-foreground">
+        {description}
+      </p>
+      <div className="flex flex-col items-center gap-3">
+        {primary}
+        {secondary}
       </div>
     </div>
+  );
+}
+
+function DashboardLink() {
+  return (
+    <Link
+      href="/dashboard"
+      className="text-sm font-medium text-muted-foreground underline-offset-4 transition-colors hover:text-foreground hover:underline"
+    >
+      Back to Dashboard
+    </Link>
   );
 }
 
@@ -384,14 +375,15 @@ function QuestionFlow({
 }) {
   const [answer, setAnswer] = useState<string | string[] | number | null>(null);
   const [showCheck, setShowCheck] = useState(false);
-  const [direction, setDirection] = useState(1); // 1 = forward
+  const [direction, setDirection] = useState(1);
+  const [prevQuestionId, setPrevQuestionId] = useState(question.id);
   const submitAnswer = useSubmitAnswer(sessionId);
 
-  // Reset answer when question changes
-  useEffect(() => {
+  if (prevQuestionId !== question.id) {
+    setPrevQuestionId(question.id);
     setAnswer(null);
     setShowCheck(false);
-  }, [question.id]);
+  }
 
   const isAnswerEmpty =
     answer === null ||
@@ -400,11 +392,9 @@ function QuestionFlow({
 
   const handleSubmit = useCallback(async () => {
     if (isAnswerEmpty) return;
-
     try {
       setShowCheck(true);
       setDirection(1);
-      // Fire API call — no artificial delay
       await submitAnswer.mutateAsync({
         questionId: question.id,
         value: answer!,
@@ -417,34 +407,27 @@ function QuestionFlow({
   const handleSkip = useCallback(async () => {
     try {
       setDirection(1);
-      // Submit with a skip value — the backend recognizes empty/skip
       await submitAnswer.mutateAsync({
         questionId: question.id,
         value: '',
       });
     } catch {
-      // Error handled by mutation
+      // handled by mutation
     }
   }, [question.id, submitAnswer]);
 
   const slideVariants = {
-    enter: (dir: number) => ({
-      x: dir > 0 ? 40 : -40,
-      opacity: 0,
-    }),
-    center: {
-      x: 0,
-      opacity: 1,
-    },
-    exit: (dir: number) => ({
-      x: dir > 0 ? -40 : 40,
-      opacity: 0,
-    }),
+    enter: (dir: number) => ({ x: dir > 0 ? 24 : -24, opacity: 0 }),
+    center: { x: 0, opacity: 1 },
+    exit: (dir: number) => ({ x: dir > 0 ? -24 : 24, opacity: 0 }),
   };
 
+  const questionText = question.question?.questionText ?? question.adaptiveText ?? '';
+  const isOptional = !(question.question?.isRequired ?? true);
+
   return (
-    <div className="flex w-full flex-col items-center">
-      <div className="w-full max-w-[540px]">
+    <div className="w-full">
+      <div className="mx-auto w-full max-w-[600px]">
         <ProgressHeader
           answered={progress.answered}
           total={progress.total}
@@ -460,30 +443,35 @@ function QuestionFlow({
             initial="enter"
             animate="center"
             exit="exit"
-            transition={{ duration: 0.2, ease: 'easeOut' }}
-            className="text-center"
+            transition={{ duration: 0.22, ease: 'easeOut' }}
           >
-            {/* Question text */}
-            <h2 className="mb-10 text-2xl font-medium leading-relaxed text-[#1C1917]">
-              {question.question?.questionText ?? question.adaptiveText ?? ''}
-            </h2>
+            <div className="rounded-2xl border border-border/70 bg-card p-6 shadow-xs sm:p-8">
+              <div className="mb-6 flex items-start justify-between gap-3">
+                <h2 className="flex-1 text-[22px] font-semibold leading-snug tracking-tight text-foreground sm:text-2xl">
+                  {questionText}
+                </h2>
+                {isOptional ? (
+                  <span className="mt-1 shrink-0 rounded-full border border-border bg-muted px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                    Optional
+                  </span>
+                ) : null}
+              </div>
 
-            {/* Question input */}
-            <div className="mb-10 text-left">
-              <QuestionRenderer
-                question={question}
-                value={answer}
-                onChange={setAnswer}
-              />
+              <div>
+                <QuestionRenderer
+                  question={question}
+                  value={answer}
+                  onChange={setAnswer}
+                />
+              </div>
             </div>
 
-            {/* Submit / Skip */}
-            <div className="flex flex-col items-center gap-3">
-              {/* Submit button with checkmark state */}
+            {/* Footer: inline on desktop, sticky on mobile */}
+            <div className="mt-6 flex flex-col items-center gap-3 sm:mt-8">
               <Button
                 onClick={handleSubmit}
                 disabled={isAnswerEmpty || submitAnswer.isPending}
-                className="h-11 min-w-[180px] rounded-full bg-[#1C1917] px-8 text-sm font-medium text-white transition-all hover:bg-[#1C1917]/90 disabled:bg-[#E7E5E4] disabled:text-[#A8A29E]"
+                className="h-11 w-full min-w-[180px] rounded-full px-8 text-sm font-medium sm:w-auto"
               >
                 {showCheck ? (
                   <motion.span
@@ -497,7 +485,7 @@ function QuestionFlow({
                 ) : submitAnswer.isPending ? (
                   <span className="flex items-center gap-2">
                     <Loader2 className="h-4 w-4 animate-spin" />
-                    Submitting...
+                    Submitting…
                   </span>
                 ) : (
                   <span className="flex items-center gap-2">
@@ -507,13 +495,12 @@ function QuestionFlow({
                 )}
               </Button>
 
-              {/* Skip button */}
-              {!(question.question?.isRequired ?? true) && (
+              {isOptional && (
                 <button
                   type="button"
                   onClick={handleSkip}
                   disabled={submitAnswer.isPending}
-                  className="text-sm font-medium text-[#A8A29E] transition-colors hover:text-[#78716C] disabled:opacity-50"
+                  className="text-sm font-medium text-stone-400 transition-colors hover:text-muted-foreground disabled:opacity-50"
                 >
                   Skip this question
                 </button>
@@ -537,15 +524,14 @@ export default function ConsultationPage() {
   const { data: currentQuestion, isLoading: questionLoading } =
     useCurrentQuestion(sessionId);
 
-  // Derive status from session + currentQuestion (currentQuestion.status is most up-to-date)
   const status = currentQuestion?.status ?? session?.status;
 
   if (sessionLoading || questionLoading) {
     return (
       <div className="flex min-h-[60vh] items-center justify-center">
         <div className="flex flex-col items-center gap-3">
-          <div className="h-8 w-8 animate-spin rounded-full border-2 border-[#1C1917] border-t-transparent" />
-          <p className="text-sm text-[#78716C]">Loading consultation...</p>
+          <div className="h-8 w-8 animate-spin rounded-full border-2 border-foreground border-t-transparent" />
+          <p className="text-sm text-muted-foreground">Loading consultation…</p>
         </div>
       </div>
     );
@@ -553,19 +539,17 @@ export default function ConsultationPage() {
 
   if (!session) {
     return (
-      <div className="flex min-h-[60vh] flex-col items-center justify-center text-center">
-        <h2 className="mb-2 text-xl font-semibold text-[#1C1917]">
-          Consultation not found
-        </h2>
-        <p className="mb-6 text-[15px] text-[#78716C]">
-          This consultation session does not exist or you do not have access to it.
-        </p>
-        <Link href="/dashboard">
-          <Button className="h-10 rounded-full bg-[#1C1917] px-6 text-sm font-medium text-white hover:bg-[#1C1917]/90">
-            Back to Dashboard
-          </Button>
-        </Link>
-      </div>
+      <StatusScreen
+        icon={<AlertTriangle className="h-7 w-7 text-stone-400" />}
+        iconBg="bg-muted"
+        title="Consultation not found"
+        description="This consultation session does not exist or you do not have access to it."
+        primary={
+          <Link href="/dashboard">
+            <Button className="h-10 rounded-full px-6">Back to Dashboard</Button>
+          </Link>
+        }
+      />
     );
   }
 
@@ -592,7 +576,6 @@ export default function ConsultationPage() {
     );
   }
 
-  // IN_PROGRESS
   if (status === 'IN_PROGRESS' && currentQuestion?.question) {
     const scopeLabel =
       session?.scope === 'WORKFLOW' && session.workflow
@@ -613,10 +596,9 @@ export default function ConsultationPage() {
     );
   }
 
-  // Fallback — should not happen
   return (
     <div className="flex min-h-[60vh] items-center justify-center">
-      <p className="text-sm text-[#78716C]">Loading...</p>
+      <p className="text-sm text-muted-foreground">Loading…</p>
     </div>
   );
 }

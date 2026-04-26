@@ -1,9 +1,9 @@
 'use client';
 
+import { Check } from 'lucide-react';
 import { Textarea } from '@/components/ui/textarea';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Label } from '@/components/ui/label';
 import type { SessionQuestion } from '@/types';
 
 interface QuestionRendererProps {
@@ -30,12 +30,12 @@ export function QuestionRenderer({ question, value, onChange }: QuestionRenderer
     return (
       <div className="space-y-2">
         <Textarea
-          placeholder="Type your answer..."
+          placeholder="Type your answer…"
           value={textValue}
           onChange={(e) => onChange(e.target.value)}
-          className="min-h-[120px] resize-none border-[#E7E5E4] bg-white text-[15px] leading-relaxed focus-visible:border-[#1C1917] focus-visible:ring-[#1C1917]/10"
+          className="min-h-[140px] resize-none rounded-xl border-border bg-card text-[15px] leading-relaxed shadow-xs focus-visible:border-foreground focus-visible:ring-foreground/10"
         />
-        <p className="text-right text-xs text-[#A8A29E]">
+        <p className="text-right text-xs text-muted-foreground/70">
           {textValue.length} characters
         </p>
       </div>
@@ -50,23 +50,25 @@ export function QuestionRenderer({ question, value, onChange }: QuestionRenderer
         onValueChange={(val) => onChange(val as string)}
         className="space-y-2"
       >
-        {options.map((option) => (
-          <label
-            key={option}
-            className={`
-              flex cursor-pointer items-center gap-3 rounded-lg border px-4 py-3.5
-              transition-all duration-150
-              ${
-                selectedValue === option
-                  ? 'border-[#1C1917] bg-[#1C1917]/[0.03]'
-                  : 'border-[#E7E5E4] bg-white hover:border-[#A8A29E] hover:bg-[#FAFAF9]'
-              }
-            `}
-          >
-            <RadioGroupItem value={option} />
-            <span className="text-[15px] text-[#1C1917]">{option}</span>
-          </label>
-        ))}
+        {options.map((option) => {
+          const isSelected = selectedValue === option;
+          return (
+            <label
+              key={option}
+              className={`group flex cursor-pointer items-center gap-3 rounded-xl border px-4 py-3.5 shadow-xs transition-all duration-150 ${
+                isSelected
+                  ? 'border-foreground bg-foreground/[0.03] ring-1 ring-foreground/10'
+                  : 'border-border bg-card hover:border-stone-400 hover:bg-muted/60'
+              }`}
+            >
+              <RadioGroupItem value={option} />
+              <span className="flex-1 text-[15px] text-foreground">{option}</span>
+              {isSelected ? (
+                <Check className="h-4 w-4 shrink-0 text-foreground" strokeWidth={2.5} />
+              ) : null}
+            </label>
+          );
+        })}
       </RadioGroup>
     );
   }
@@ -89,21 +91,20 @@ export function QuestionRenderer({ question, value, onChange }: QuestionRenderer
           return (
             <label
               key={option}
-              className={`
-                flex cursor-pointer items-center gap-3 rounded-lg border px-4 py-3.5
-                transition-all duration-150
-                ${
-                  isChecked
-                    ? 'border-[#1C1917] bg-[#1C1917]/[0.03]'
-                    : 'border-[#E7E5E4] bg-white hover:border-[#A8A29E] hover:bg-[#FAFAF9]'
-                }
-              `}
+              className={`group flex cursor-pointer items-center gap-3 rounded-xl border px-4 py-3.5 shadow-xs transition-all duration-150 ${
+                isChecked
+                  ? 'border-foreground bg-foreground/[0.03] ring-1 ring-foreground/10'
+                  : 'border-border bg-card hover:border-stone-400 hover:bg-muted/60'
+              }`}
             >
               <Checkbox
                 checked={isChecked}
                 onCheckedChange={() => handleToggle(option)}
               />
-              <span className="text-[15px] text-[#1C1917]">{option}</span>
+              <span className="flex-1 text-[15px] text-foreground">{option}</span>
+              {isChecked ? (
+                <Check className="h-4 w-4 shrink-0 text-foreground" strokeWidth={2.5} />
+              ) : null}
             </label>
           );
         })}
@@ -114,40 +115,37 @@ export function QuestionRenderer({ question, value, onChange }: QuestionRenderer
   if (questionType === 'SCALE') {
     const numValue = typeof value === 'number' ? value : null;
     return (
-      <div className="space-y-4">
-        <div className="flex items-center justify-between gap-2">
-          {[1, 2, 3, 4, 5].map((n) => (
-            <button
-              key={n}
-              type="button"
-              onClick={() => onChange(n)}
-              className={`
-                flex h-12 w-12 shrink-0 items-center justify-center rounded-full
-                text-sm font-semibold transition-all duration-150
-                ${
-                  numValue === n
-                    ? 'bg-[#1C1917] text-white scale-110'
-                    : 'border border-[#E7E5E4] bg-white text-[#78716C] hover:border-[#A8A29E] hover:bg-[#FAFAF9]'
-                }
-              `}
-            >
-              {n}
-            </button>
-          ))}
+      <div className="space-y-3">
+        <div className="grid grid-cols-5 gap-2">
+          {[1, 2, 3, 4, 5].map((n) => {
+            const isSelected = numValue === n;
+            return (
+              <button
+                key={n}
+                type="button"
+                onClick={() => onChange(n)}
+                aria-label={`${n} — ${scaleLabels[n]}`}
+                className={`flex aspect-square min-h-[56px] flex-col items-center justify-center rounded-xl border text-base font-semibold shadow-xs transition-all duration-150 ${
+                  isSelected
+                    ? 'border-foreground bg-foreground text-background ring-1 ring-foreground/20'
+                    : 'border-border bg-card text-muted-foreground hover:border-stone-400 hover:bg-muted/60 hover:text-foreground'
+                }`}
+              >
+                {n}
+              </button>
+            );
+          })}
         </div>
-        <div className="flex justify-between gap-2">
-          {[1, 2, 3, 4, 5].map((n) => (
-            <span
-              key={n}
-              className={`
-                w-12 text-center text-[10px] leading-tight
-                ${numValue === n ? 'font-medium text-[#1C1917]' : 'text-[#A8A29E]'}
-              `}
-            >
-              {scaleLabels[n]}
-            </span>
-          ))}
+        <div className="flex items-center justify-between text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+          <span>{scaleLabels[1]}</span>
+          <span className="hidden sm:inline">{scaleLabels[3]}</span>
+          <span>{scaleLabels[5]}</span>
         </div>
+        {numValue ? (
+          <p className="text-center text-xs font-medium text-foreground">
+            {scaleLabels[numValue]}
+          </p>
+        ) : null}
       </div>
     );
   }
