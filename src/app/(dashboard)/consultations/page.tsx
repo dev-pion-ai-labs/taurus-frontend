@@ -84,13 +84,13 @@ export default function ConsultationsPage() {
       <Tabs value={tab} onValueChange={(v) => setTab(v as ScopeTab)}>
         <div className="border-b border-border">
           <TabsList variant="line" className="h-10 gap-2 p-0">
-            <TabsTrigger value="ORG" className="h-10 gap-2 px-3 text-[13px]">
+            <TabsTrigger value="ORG" className="h-10 gap-2 px-3 text-[13px] after:-bottom-px!">
               <Building2 className="h-4 w-4" /> {TAB_LABEL.ORG}
             </TabsTrigger>
-            <TabsTrigger value="DEPARTMENT" className="h-10 gap-2 px-3 text-[13px]">
+            <TabsTrigger value="DEPARTMENT" className="h-10 gap-2 px-3 text-[13px] after:-bottom-px!">
               <Users className="h-4 w-4" /> {TAB_LABEL.DEPARTMENT}
             </TabsTrigger>
-            <TabsTrigger value="WORKFLOW" className="h-10 gap-2 px-3 text-[13px]">
+            <TabsTrigger value="WORKFLOW" className="h-10 gap-2 px-3 text-[13px] after:-bottom-px!">
               <GitBranch className="h-4 w-4" /> {TAB_LABEL.WORKFLOW}
             </TabsTrigger>
           </TabsList>
@@ -211,14 +211,22 @@ function DepartmentPanel() {
           value={departmentId}
           onValueChange={(v) => setDepartmentId(v ?? '')}
         >
-          <SelectTrigger className="h-10 w-[240px] bg-card">
+          <SelectTrigger className="h-10 w-[300px] bg-card px-3 text-[13px]">
             <SelectValue placeholder="Select a department…">
               {selectedDept?.name}
             </SelectValue>
           </SelectTrigger>
-          <SelectContent>
+          <SelectContent
+            alignItemWithTrigger={false}
+            align="start"
+            className="min-w-[300px] max-w-[420px]"
+          >
             {deptList.map((d: Department) => (
-              <SelectItem key={d.id} value={d.id}>
+              <SelectItem
+                key={d.id}
+                value={d.id}
+                className="py-2 pl-2.5 pr-9 text-[13px]"
+              >
                 {d.name}
                 {d.headcount != null ? ` · ${d.headcount} ppl` : ''}
                 {d.workflows?.length
@@ -313,14 +321,22 @@ function WorkflowPanel() {
             setWorkflowId('');
           }}
         >
-          <SelectTrigger className="h-10 w-[200px] bg-card">
+          <SelectTrigger className="h-10 w-[240px] bg-card px-3 text-[13px]">
             <SelectValue placeholder="Department…">
               {selectedDept?.name}
             </SelectValue>
           </SelectTrigger>
-          <SelectContent>
+          <SelectContent
+            alignItemWithTrigger={false}
+            align="start"
+            className="min-w-[240px] max-w-[360px]"
+          >
             {deptList.map((d: Department) => (
-              <SelectItem key={d.id} value={d.id}>
+              <SelectItem
+                key={d.id}
+                value={d.id}
+                className="py-2 pl-2.5 pr-9 text-[13px]"
+              >
                 {d.name}
               </SelectItem>
             ))}
@@ -332,7 +348,7 @@ function WorkflowPanel() {
           onValueChange={(v) => setWorkflowId(v ?? '')}
           disabled={!departmentId || workflows.length === 0}
         >
-          <SelectTrigger className="h-10 w-[220px] bg-card">
+          <SelectTrigger className="h-10 w-[280px] bg-card px-3 text-[13px]">
             <SelectValue
               placeholder={
                 !departmentId
@@ -345,9 +361,17 @@ function WorkflowPanel() {
               {selectedWorkflow?.name}
             </SelectValue>
           </SelectTrigger>
-          <SelectContent>
+          <SelectContent
+            alignItemWithTrigger={false}
+            align="start"
+            className="min-w-[280px] max-w-[420px]"
+          >
             {workflows.map((w) => (
-              <SelectItem key={w.id} value={w.id}>
+              <SelectItem
+                key={w.id}
+                value={w.id}
+                className="py-2 pl-2.5 pr-9 text-[13px]"
+              >
                 {w.name}
                 {w.weeklyHours != null ? ` · ${w.weeklyHours}h/wk` : ''}
               </SelectItem>
@@ -405,7 +429,7 @@ function HeroCard({
         aria-hidden
         className="pointer-events-none absolute inset-y-0 right-0 w-1/2 bg-gradient-to-l from-muted/60 to-transparent"
       />
-      <div className="relative flex flex-col items-start justify-between gap-4 p-5 sm:flex-row sm:items-center sm:gap-6 sm:p-6">
+      <div className="relative flex flex-col items-start justify-between gap-4 p-5 lg:flex-row lg:items-center lg:gap-6 lg:p-6">
         <div className="flex items-start gap-4">
           <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-border bg-accent text-accent-foreground">
             <Icon className="h-5 w-5" />

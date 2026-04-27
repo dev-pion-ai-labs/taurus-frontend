@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { LogOut, Trash2 } from 'lucide-react';
+import { ArrowLeft, LogOut, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { ProtectedRoute } from '@/components/shared/protected-route';
 import { Button } from '@/components/ui/button';
@@ -17,7 +17,7 @@ import {
   DialogTrigger,
   DialogClose,
 } from '@/components/ui/dialog';
-import { useAbandonSession } from '@/hooks/use-sessions';
+import { useAbandonSession, useSession } from '@/hooks/use-sessions';
 
 export default function ConsultationLayout({
   children,
@@ -27,8 +27,14 @@ export default function ConsultationLayout({
   const params = useParams();
   const router = useRouter();
   const sessionId = params.id as string;
+  const session = useSession(sessionId);
   const abandonSession = useAbandonSession(sessionId);
   const [dialogOpen, setDialogOpen] = useState(false);
+
+  const isFinished =
+    session.data?.status === 'COMPLETED' ||
+    session.data?.status === 'ABANDONED' ||
+    session.data?.status === 'FAILED';
 
   const handleSaveAndExit = () => {
     setDialogOpen(false);
@@ -69,50 +75,76 @@ export default function ConsultationLayout({
               Taurus
             </Link>
 
-            <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-              <DialogTrigger
-                render={
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="gap-1.5 text-muted-foreground hover:text-foreground"
-                  />
-                }
+            {isFinished ? (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => router.push('/dashboard')}
+                className="gap-1.5 text-muted-foreground hover:text-foreground"
               >
-                <LogOut className="h-4 w-4" />
-                Exit
-              </DialogTrigger>
-              <DialogContent showCloseButton={false}>
-                <DialogHeader>
-                  <DialogTitle>Leaving the consultation?</DialogTitle>
-                  <DialogDescription>
-                    Your progress is auto-saved. Pick up where you left off
-                    any time from the dashboard or the Consultations hub.
-                  </DialogDescription>
-                </DialogHeader>
-                <DialogFooter className="flex-col-reverse gap-2 sm:flex-row sm:justify-between">
-                  <button
-                    type="button"
-                    onClick={handleDiscard}
-                    disabled={abandonSession.isPending}
-                    className="inline-flex items-center gap-1.5 self-start text-xs font-medium text-stone-400 transition-colors hover:text-destructive disabled:opacity-50"
-                  >
-                    <Trash2 className="h-3 w-3" />
-                    {abandonSession.isPending
-                      ? 'Discarding…'
-                      : 'Discard this consultation'}
-                  </button>
-                  <div className="flex gap-2">
-                    <DialogClose render={<Button variant="outline" />}>
-                      Keep going
-                    </DialogClose>
-                    <Button onClick={handleSaveAndExit}>
-                      Save & continue later
+                <ArrowLeft className="h-4 w-4" />
+                Back to dashboard
+              </Button>
+            ) : (
+              <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+                <DialogTrigger
+                  render={
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="gap-1.5 text-muted-foreground hover:text-foreground"
+                    />
+                  }
+                >
+                  <LogOut className="h-4 w-4" />
+                  Exit
+                </DialogTrigger>
+                <DialogContent
+                  showCloseButton={false}
+                  className="sm:max-w-md"
+                >
+                  <DialogHeader>
+                    <DialogTitle className="text-[15px]">
+                      Leaving the consultation?
+                    </DialogTitle>
+                    <DialogDescription className="text-[13px] leading-relaxed">
+                      Your progress is auto-saved. Pick up where you left off
+                      any time from the dashboard or the Consultations hub.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <DialogFooter className="mt-2 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={handleDiscard}
+                      disabled={abandonSession.isPending}
+                      className="gap-1.5 self-start text-xs text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                      {abandonSession.isPending
+                        ? 'Discarding…'
+                        : 'Discard consultation'}
                     </Button>
-                  </div>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
+                    <div className="flex gap-2 sm:shrink-0">
+                      <DialogClose
+                        render={
+                          <Button variant="outline" className="flex-1 sm:flex-none" />
+                        }
+                      >
+                        Keep going
+                      </DialogClose>
+                      <Button
+                        onClick={handleSaveAndExit}
+                        className="flex-1 sm:flex-none"
+                      >
+                        Save &amp; continue later
+                      </Button>
+                    </div>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+            )}
           </div>
         </header>
 
