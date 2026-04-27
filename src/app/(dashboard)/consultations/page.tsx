@@ -8,7 +8,6 @@ import {
   ChevronRight,
   GitBranch,
   Loader2,
-  Sparkles,
   Users,
 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -106,10 +105,6 @@ export default function ConsultationsPage() {
           <WorkflowPanel />
         </TabsContent>
       </Tabs>
-
-      <ScopeLevelGrid />
-
-      <TipBanner />
     </div>
   );
 }
@@ -536,69 +531,6 @@ function PastSessions({
         </ul>
       )}
     </section>
-  );
-}
-
-function ScopeLevelGrid() {
-  const items: {
-    scope: ScopeTab;
-    title: string;
-    description: string;
-  }[] = [
-    {
-      scope: 'ORG',
-      title: 'Organisation level',
-      description:
-        'Get the big picture. Ideal for strategy, maturity assessments, and roadmap planning.',
-    },
-    {
-      scope: 'DEPARTMENT',
-      title: 'Department level',
-      description:
-        'Focus on what matters. Deep-dive into a single department’s workflows, headcount, and pain points.',
-    },
-    {
-      scope: 'WORKFLOW',
-      title: 'Workflow level',
-      description:
-        'Zoom in on a single workflow. Uncover actionable insights and optimisation opportunities.',
-    },
-  ];
-  return (
-    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-      {items.map(({ scope, title, description }) => {
-        const Icon = SCOPE_ICON[scope];
-        return (
-          <div
-            key={scope}
-            className="rounded-xl border border-border bg-card p-4"
-          >
-            <div className="flex items-center gap-2.5">
-              <Icon className="h-4 w-4 text-accent-foreground" />
-              <h3 className="text-[13px] font-semibold tracking-tight text-foreground">
-                {title}
-              </h3>
-            </div>
-            <p className="mt-2 text-[12.5px] leading-relaxed text-muted-foreground">
-              {description}
-            </p>
-          </div>
-        );
-      })}
-    </div>
-  );
-}
-
-function TipBanner() {
-  return (
-    <div className="flex items-start gap-2.5 rounded-xl border border-border bg-card px-4 py-3 text-[13px]">
-      <span className="inline-flex items-center gap-1.5 font-semibold text-accent-foreground">
-        <Sparkles className="h-3.5 w-3.5" /> Tip
-      </span>
-      <span className="text-muted-foreground">
-        Not sure which level to start with? Begin with an organisation consultation for a comprehensive overview.
-      </span>
-    </div>
   );
 }
 
