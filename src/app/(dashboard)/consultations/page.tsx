@@ -4,24 +4,16 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
-  ArrowRight,
-  HelpCircle,
+  Building2,
+  ChevronRight,
+  GitBranch,
   Loader2,
-  MessageSquare,
-  Network,
-  Workflow as WorkflowIcon,
+  Sparkles,
+  Users,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
-import {
-  Popover,
-  PopoverContent,
-  PopoverDescription,
-  PopoverHeader,
-  PopoverTitle,
-  PopoverTrigger,
-} from '@/components/ui/popover';
 import {
   Select,
   SelectContent,
@@ -49,12 +41,30 @@ const TAB_LABEL: Record<ScopeTab, string> = {
   WORKFLOW: 'Workflow',
 };
 
-const TAB_DESCRIPTION: Record<ScopeTab, string> = {
+const SCOPE_LABEL: Record<ScopeTab, string> = {
+  ORG: 'organisation',
+  DEPARTMENT: 'department',
+  WORKFLOW: 'workflow',
+};
+
+const HERO_TITLE: Record<ScopeTab, string> = {
+  ORG: 'Organisation consultation',
+  DEPARTMENT: 'Department consultation',
+  WORKFLOW: 'Workflow consultation',
+};
+
+const HERO_DESCRIPTION: Record<ScopeTab, string> = {
   ORG: 'A company-wide consultation. Covers strategy, maturity, and roadmap across the entire organisation.',
   DEPARTMENT:
     'Scoped to a single department. Questions and the report focus only on that team’s workflows, headcount, and pain points.',
   WORKFLOW:
     'Scoped to a single workflow. Deep-dive into one specific process — the tightest grounding for actionable recommendations.',
+};
+
+const SCOPE_ICON: Record<ScopeTab, React.ComponentType<{ className?: string }>> = {
+  ORG: Building2,
+  DEPARTMENT: Users,
+  WORKFLOW: GitBranch,
 };
 
 export default function ConsultationsPage() {
@@ -67,37 +77,39 @@ export default function ConsultationsPage() {
           Consultations
         </h1>
         <p className="mt-0.5 text-[13px] text-muted-foreground">
-          Run a consultation at the right level — organisation, department, or workflow.
+          Run a consultation at the right level of detail — organisation, department, or a single workflow.
         </p>
       </header>
 
       <Tabs value={tab} onValueChange={(v) => setTab(v as ScopeTab)}>
-        <div className="flex items-end justify-between gap-3 border-b border-border">
+        <div className="border-b border-border">
           <TabsList variant="line" className="h-10 gap-2 p-0">
             <TabsTrigger value="ORG" className="h-10 gap-2 px-3 text-[13px]">
-              <MessageSquare className="h-4 w-4" /> {TAB_LABEL.ORG}
+              <Building2 className="h-4 w-4" /> {TAB_LABEL.ORG}
             </TabsTrigger>
             <TabsTrigger value="DEPARTMENT" className="h-10 gap-2 px-3 text-[13px]">
-              <Network className="h-4 w-4" /> {TAB_LABEL.DEPARTMENT}
+              <Users className="h-4 w-4" /> {TAB_LABEL.DEPARTMENT}
             </TabsTrigger>
             <TabsTrigger value="WORKFLOW" className="h-10 gap-2 px-3 text-[13px]">
-              <WorkflowIcon className="h-4 w-4" /> {TAB_LABEL.WORKFLOW}
+              <GitBranch className="h-4 w-4" /> {TAB_LABEL.WORKFLOW}
             </TabsTrigger>
           </TabsList>
-
-          <ScopeHelp scope={tab} />
         </div>
 
-        <TabsContent value="ORG" className="pt-4">
+        <TabsContent value="ORG" className="pt-5">
           <OrgPanel />
         </TabsContent>
-        <TabsContent value="DEPARTMENT" className="pt-4">
+        <TabsContent value="DEPARTMENT" className="pt-5">
           <DepartmentPanel />
         </TabsContent>
-        <TabsContent value="WORKFLOW" className="pt-4">
+        <TabsContent value="WORKFLOW" className="pt-5">
           <WorkflowPanel />
         </TabsContent>
       </Tabs>
+
+      <ScopeLevelGrid />
+
+      <TipBanner />
     </div>
   );
 }
@@ -126,7 +138,7 @@ function OrgPanel() {
 
   return (
     <div className="flex flex-col gap-5">
-      <ActionBar>
+      <HeroCard scope="ORG">
         <Button
           onClick={handleStart}
           disabled={startSession.isPending}
@@ -138,13 +150,14 @@ function OrgPanel() {
             </>
           ) : (
             <>
-              Start Consultation <ArrowRight className="h-4 w-4" />
+              Start Organisation Consultation <ChevronRight className="h-4 w-4" />
             </>
           )}
         </Button>
-      </ActionBar>
+      </HeroCard>
 
       <PastSessions
+        scope="ORG"
         sessions={sessions.data ?? []}
         loading={sessions.isLoading}
       />
@@ -187,57 +200,59 @@ function DepartmentPanel() {
   const deptList = departments.data ?? [];
   const selectedDept = deptList.find((d) => d.id === departmentId);
 
+  const controls =
+    departments.isLoading ? (
+      <Skeleton className="h-10 w-[240px]" />
+    ) : deptList.length === 0 ? (
+      <EmptyDepartmentsHint />
+    ) : (
+      <div className="flex flex-wrap items-center gap-2">
+        <Select
+          value={departmentId}
+          onValueChange={(v) => setDepartmentId(v ?? '')}
+        >
+          <SelectTrigger className="h-10 w-[240px] bg-card">
+            <SelectValue placeholder="Select a department…">
+              {selectedDept?.name}
+            </SelectValue>
+          </SelectTrigger>
+          <SelectContent>
+            {deptList.map((d: Department) => (
+              <SelectItem key={d.id} value={d.id}>
+                {d.name}
+                {d.headcount != null ? ` · ${d.headcount} ppl` : ''}
+                {d.workflows?.length
+                  ? ` · ${d.workflows.length} workflows`
+                  : ''}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        <Button
+          onClick={handleStart}
+          disabled={!departmentId || startSession.isPending}
+          className="h-10 gap-1.5"
+        >
+          {startSession.isPending ? (
+            <>
+              <Loader2 className="h-4 w-4 animate-spin" /> Starting…
+            </>
+          ) : (
+            <>
+              Start Department Consultation <ChevronRight className="h-4 w-4" />
+            </>
+          )}
+        </Button>
+      </div>
+    );
+
   return (
     <div className="flex flex-col gap-5">
-      <ActionBar>
-        {departments.isLoading ? (
-          <Skeleton className="h-10 w-[240px]" />
-        ) : deptList.length === 0 ? (
-          <EmptyDepartmentsHint />
-        ) : (
-          <>
-            <Select
-              value={departmentId}
-              onValueChange={(v) => setDepartmentId(v ?? '')}
-            >
-              <SelectTrigger className="h-10 w-[240px]">
-                <SelectValue placeholder="Select a department…">
-                  {selectedDept?.name}
-                </SelectValue>
-              </SelectTrigger>
-              <SelectContent>
-                {deptList.map((d: Department) => (
-                  <SelectItem key={d.id} value={d.id}>
-                    {d.name}
-                    {d.headcount != null ? ` · ${d.headcount} ppl` : ''}
-                    {d.workflows?.length
-                      ? ` · ${d.workflows.length} workflows`
-                      : ''}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
-            <Button
-              onClick={handleStart}
-              disabled={!departmentId || startSession.isPending}
-              className="h-10 gap-1.5"
-            >
-              {startSession.isPending ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin" /> Starting…
-                </>
-              ) : (
-                <>
-                  Start Consultation <ArrowRight className="h-4 w-4" />
-                </>
-              )}
-            </Button>
-          </>
-        )}
-      </ActionBar>
+      <HeroCard scope="DEPARTMENT">{controls}</HeroCard>
 
       <PastSessions
+        scope="DEPARTMENT"
         sessions={sessions.data ?? []}
         loading={sessions.isLoading}
         filterLabel={selectedDept ? selectedDept.name : null}
@@ -284,84 +299,86 @@ function WorkflowPanel() {
     );
   };
 
+  const controls =
+    departments.isLoading ? (
+      <Skeleton className="h-10 w-[240px]" />
+    ) : deptList.length === 0 ? (
+      <EmptyDepartmentsHint />
+    ) : (
+      <div className="flex flex-wrap items-center gap-2">
+        <Select
+          value={departmentId}
+          onValueChange={(v) => {
+            setDepartmentId(v ?? '');
+            setWorkflowId('');
+          }}
+        >
+          <SelectTrigger className="h-10 w-[200px] bg-card">
+            <SelectValue placeholder="Department…">
+              {selectedDept?.name}
+            </SelectValue>
+          </SelectTrigger>
+          <SelectContent>
+            {deptList.map((d: Department) => (
+              <SelectItem key={d.id} value={d.id}>
+                {d.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        <Select
+          value={workflowId}
+          onValueChange={(v) => setWorkflowId(v ?? '')}
+          disabled={!departmentId || workflows.length === 0}
+        >
+          <SelectTrigger className="h-10 w-[220px] bg-card">
+            <SelectValue
+              placeholder={
+                !departmentId
+                  ? 'Pick a department first'
+                  : workflows.length === 0
+                    ? 'No workflows here'
+                    : 'Workflow…'
+              }
+            >
+              {selectedWorkflow?.name}
+            </SelectValue>
+          </SelectTrigger>
+          <SelectContent>
+            {workflows.map((w) => (
+              <SelectItem key={w.id} value={w.id}>
+                {w.name}
+                {w.weeklyHours != null ? ` · ${w.weeklyHours}h/wk` : ''}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        <Button
+          onClick={handleStart}
+          disabled={!departmentId || !workflowId || startSession.isPending}
+          className="h-10 gap-1.5"
+        >
+          {startSession.isPending ? (
+            <>
+              <Loader2 className="h-4 w-4 animate-spin" /> Starting…
+            </>
+          ) : (
+            <>
+              Start Workflow Consultation <ChevronRight className="h-4 w-4" />
+            </>
+          )}
+        </Button>
+      </div>
+    );
+
   return (
     <div className="flex flex-col gap-5">
-      <ActionBar>
-        {departments.isLoading ? (
-          <Skeleton className="h-10 w-[240px]" />
-        ) : deptList.length === 0 ? (
-          <EmptyDepartmentsHint />
-        ) : (
-          <>
-            <Select
-              value={departmentId}
-              onValueChange={(v) => {
-                setDepartmentId(v ?? '');
-                setWorkflowId('');
-              }}
-            >
-              <SelectTrigger className="h-10 w-[200px]">
-                <SelectValue placeholder="Department…">
-                  {selectedDept?.name}
-                </SelectValue>
-              </SelectTrigger>
-              <SelectContent>
-                {deptList.map((d: Department) => (
-                  <SelectItem key={d.id} value={d.id}>
-                    {d.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
-            <Select
-              value={workflowId}
-              onValueChange={(v) => setWorkflowId(v ?? '')}
-              disabled={!departmentId || workflows.length === 0}
-            >
-              <SelectTrigger className="h-10 w-[220px]">
-                <SelectValue
-                  placeholder={
-                    !departmentId
-                      ? 'Pick a department first'
-                      : workflows.length === 0
-                        ? 'No workflows here'
-                        : 'Workflow…'
-                  }
-                >
-                  {selectedWorkflow?.name}
-                </SelectValue>
-              </SelectTrigger>
-              <SelectContent>
-                {workflows.map((w) => (
-                  <SelectItem key={w.id} value={w.id}>
-                    {w.name}
-                    {w.weeklyHours != null ? ` · ${w.weeklyHours}h/wk` : ''}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
-            <Button
-              onClick={handleStart}
-              disabled={!departmentId || !workflowId || startSession.isPending}
-              className="h-10 gap-1.5"
-            >
-              {startSession.isPending ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin" /> Starting…
-                </>
-              ) : (
-                <>
-                  Start Consultation <ArrowRight className="h-4 w-4" />
-                </>
-              )}
-            </Button>
-          </>
-        )}
-      </ActionBar>
+      <HeroCard scope="WORKFLOW">{controls}</HeroCard>
 
       <PastSessions
+        scope="WORKFLOW"
         sessions={sessions.data ?? []}
         loading={sessions.isLoading}
         filterLabel={selectedWorkflow ? selectedWorkflow.name : null}
@@ -374,32 +391,37 @@ function WorkflowPanel() {
 // Shared parts
 // ---------------------------------------------------------------------------
 
-function ActionBar({ children }: { children: React.ReactNode }) {
-  return <div className="flex flex-wrap items-center gap-2">{children}</div>;
-}
-
-function ScopeHelp({ scope }: { scope: ScopeTab }) {
+function HeroCard({
+  scope,
+  children,
+}: {
+  scope: ScopeTab;
+  children: React.ReactNode;
+}) {
+  const Icon = SCOPE_ICON[scope];
   return (
-    <Popover>
-      <PopoverTrigger
-        render={
-          <button
-            type="button"
-            aria-label={`About ${TAB_LABEL[scope]} consultation`}
-            className="mb-1 inline-flex h-7 shrink-0 items-center gap-1.5 rounded-md px-2 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-          />
-        }
-      >
-        <HelpCircle className="h-3.5 w-3.5" />
-        About
-      </PopoverTrigger>
-      <PopoverContent align="end" className="w-[320px]">
-        <PopoverHeader>
-          <PopoverTitle>{TAB_LABEL[scope]} consultation</PopoverTitle>
-        </PopoverHeader>
-        <PopoverDescription>{TAB_DESCRIPTION[scope]}</PopoverDescription>
-      </PopoverContent>
-    </Popover>
+    <div className="relative overflow-hidden rounded-xl border border-border bg-card">
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-y-0 right-0 w-1/2 bg-gradient-to-l from-muted/60 to-transparent"
+      />
+      <div className="relative flex flex-col items-start justify-between gap-4 p-5 sm:flex-row sm:items-center sm:gap-6 sm:p-6">
+        <div className="flex items-start gap-4">
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-border bg-accent text-accent-foreground">
+            <Icon className="h-5 w-5" />
+          </div>
+          <div className="min-w-0">
+            <h2 className="text-[15px] font-semibold tracking-tight text-foreground">
+              {HERO_TITLE[scope]}
+            </h2>
+            <p className="mt-1 max-w-xl text-[13px] leading-relaxed text-muted-foreground">
+              {HERO_DESCRIPTION[scope]}
+            </p>
+          </div>
+        </div>
+        <div className="shrink-0">{children}</div>
+      </div>
+    </div>
   );
 }
 
@@ -419,21 +441,23 @@ function EmptyDepartmentsHint() {
 }
 
 function PastSessions({
+  scope,
   sessions,
   loading,
   filterLabel,
 }: {
+  scope: ScopeTab;
   sessions: ConsultationSession[];
   loading: boolean;
   filterLabel?: string | null;
 }) {
   return (
-    <section>
-      <div className="mb-2 flex items-baseline justify-between gap-2">
-        <h2 className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
-          Past sessions
+    <section className="rounded-xl border border-border bg-card p-4 sm:p-5">
+      <div className="mb-3 flex items-baseline justify-between gap-2">
+        <h2 className="text-[13px] font-semibold tracking-tight text-foreground">
+          Past sessions <span className="text-muted-foreground">· {SCOPE_LABEL[scope]}</span>
           {filterLabel ? (
-            <span className="ml-2 rounded-full border border-border bg-muted px-1.5 py-0.5 text-[10px] font-medium normal-case tracking-normal text-foreground">
+            <span className="ml-2 rounded-full border border-border bg-muted px-1.5 py-0.5 text-[10px] font-medium tracking-normal text-foreground">
               {filterLabel}
             </span>
           ) : null}
@@ -447,37 +471,110 @@ function PastSessions({
 
       {loading ? (
         <div className="space-y-1">
-          <Skeleton className="h-10 w-full" />
-          <Skeleton className="h-10 w-full" />
+          <Skeleton className="h-12 w-full" />
+          <Skeleton className="h-12 w-full" />
         </div>
       ) : sessions.length === 0 ? (
         <p className="rounded-md border border-dashed border-border bg-muted/30 px-3 py-3 text-xs text-muted-foreground">
           No consultations yet at this scope.
         </p>
       ) : (
-        <ul className="divide-y divide-border overflow-hidden rounded-lg border border-border bg-card">
-          {sessions.map((s) => (
-            <li key={s.id}>
-              <Link
-                href={`/consultation/${s.id}`}
-                className="flex items-center justify-between gap-3 px-3 py-2.5 text-[13px] transition-colors hover:bg-muted/50"
-              >
-                <div className="min-w-0">
-                  <div className="truncate font-medium text-foreground">
-                    {scopeTitle(s)}
+        <ul className="divide-y divide-border">
+          {sessions.map((s) => {
+            const Icon = SCOPE_ICON[s.scope];
+            return (
+              <li key={s.id}>
+                <Link
+                  href={`/consultation/${s.id}`}
+                  className="flex items-center justify-between gap-3 py-3 text-[13px] transition-colors hover:bg-muted/40 -mx-2 px-2 rounded-md"
+                >
+                  <div className="flex min-w-0 items-center gap-3">
+                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-border bg-accent text-accent-foreground">
+                      <Icon className="h-4 w-4" />
+                    </div>
+                    <div className="min-w-0">
+                      <div className="truncate font-medium text-foreground">
+                        {scopeTitle(s)}
+                      </div>
+                      <div className="truncate text-xs text-muted-foreground">
+                        {formatStarted(s.startedAt)}
+                        {s._count?.questions
+                          ? ` · ${s._count.questions} questions`
+                          : ''}
+                      </div>
+                    </div>
                   </div>
-                  <div className="truncate text-xs text-muted-foreground">
-                    {formatStarted(s.startedAt)}
-                    {s._count?.questions ? ` · ${s._count.questions} questions` : ''}
-                  </div>
-                </div>
-                <StatusBadge status={s.status} />
-              </Link>
-            </li>
-          ))}
+                  <StatusBadge status={s.status} />
+                </Link>
+              </li>
+            );
+          })}
         </ul>
       )}
     </section>
+  );
+}
+
+function ScopeLevelGrid() {
+  const items: {
+    scope: ScopeTab;
+    title: string;
+    description: string;
+  }[] = [
+    {
+      scope: 'ORG',
+      title: 'Organisation level',
+      description:
+        'Get the big picture. Ideal for strategy, maturity assessments, and roadmap planning.',
+    },
+    {
+      scope: 'DEPARTMENT',
+      title: 'Department level',
+      description:
+        'Focus on what matters. Deep-dive into a single department’s workflows, headcount, and pain points.',
+    },
+    {
+      scope: 'WORKFLOW',
+      title: 'Workflow level',
+      description:
+        'Zoom in on a single workflow. Uncover actionable insights and optimisation opportunities.',
+    },
+  ];
+  return (
+    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+      {items.map(({ scope, title, description }) => {
+        const Icon = SCOPE_ICON[scope];
+        return (
+          <div
+            key={scope}
+            className="rounded-xl border border-border bg-card p-4"
+          >
+            <div className="flex items-center gap-2.5">
+              <Icon className="h-4 w-4 text-accent-foreground" />
+              <h3 className="text-[13px] font-semibold tracking-tight text-foreground">
+                {title}
+              </h3>
+            </div>
+            <p className="mt-2 text-[12.5px] leading-relaxed text-muted-foreground">
+              {description}
+            </p>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function TipBanner() {
+  return (
+    <div className="flex items-start gap-2.5 rounded-xl border border-border bg-card px-4 py-3 text-[13px]">
+      <span className="inline-flex items-center gap-1.5 font-semibold text-accent-foreground">
+        <Sparkles className="h-3.5 w-3.5" /> Tip
+      </span>
+      <span className="text-muted-foreground">
+        Not sure which level to start with? Begin with an organisation consultation for a comprehensive overview.
+      </span>
+    </div>
   );
 }
 
@@ -502,5 +599,9 @@ function formatStarted(iso: string): string {
   if (hours < 24) return `${hours}h ago`;
   const days = Math.floor(hours / 24);
   if (days < 7) return `${days}d ago`;
-  return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+  return d.toLocaleDateString(undefined, {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  });
 }
