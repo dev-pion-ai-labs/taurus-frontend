@@ -11,7 +11,6 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -112,14 +111,13 @@ export default function ConsultationLayout({
                       any time from the dashboard or the Consultations hub.
                     </DialogDescription>
                   </DialogHeader>
-                  <DialogFooter className="mt-2 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="mt-3 flex flex-col-reverse gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
                     <Button
                       type="button"
                       variant="ghost"
-                      size="sm"
                       onClick={handleDiscard}
                       disabled={abandonSession.isPending}
-                      className="gap-1.5 self-start text-xs text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                      className="gap-1.5 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
                     >
                       <Trash2 className="h-3.5 w-3.5" />
                       {abandonSession.isPending
@@ -127,21 +125,14 @@ export default function ConsultationLayout({
                         : 'Discard consultation'}
                     </Button>
                     <div className="flex gap-2 sm:shrink-0">
-                      <DialogClose
-                        render={
-                          <Button variant="outline" className="flex-1 sm:flex-none" />
-                        }
-                      >
-                        Keep going
-                      </DialogClose>
-                      <Button
-                        onClick={handleSaveAndExit}
-                        className="flex-1 sm:flex-none"
-                      >
+                      <Button onClick={handleSaveAndExit}>
                         Save &amp; continue later
                       </Button>
+                      <DialogClose render={<Button variant="outline" />}>
+                        Cancel
+                      </DialogClose>
                     </div>
-                  </DialogFooter>
+                  </div>
                 </DialogContent>
               </Dialog>
             )}
