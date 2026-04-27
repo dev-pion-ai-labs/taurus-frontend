@@ -206,7 +206,7 @@ function DepartmentPanel() {
           value={departmentId}
           onValueChange={(v) => setDepartmentId(v ?? '')}
         >
-          <SelectTrigger className="h-10 w-[300px] bg-card px-3 text-[13px]">
+          <SelectTrigger className="h-10 min-w-[280px] max-w-[440px] bg-card px-3 text-[13px]">
             <SelectValue placeholder="Select a department…">
               {selectedDept?.name}
             </SelectValue>
@@ -214,7 +214,7 @@ function DepartmentPanel() {
           <SelectContent
             alignItemWithTrigger={false}
             align="start"
-            className="min-w-[300px] max-w-[420px]"
+            className="min-w-[320px] max-w-[560px]"
           >
             {deptList.map((d: Department) => (
               <SelectItem
@@ -316,7 +316,7 @@ function WorkflowPanel() {
             setWorkflowId('');
           }}
         >
-          <SelectTrigger className="h-10 w-[240px] bg-card px-3 text-[13px]">
+          <SelectTrigger className="h-10 min-w-[220px] max-w-[300px] bg-card px-3 text-[13px]">
             <SelectValue placeholder="Department…">
               {selectedDept?.name}
             </SelectValue>
@@ -324,7 +324,7 @@ function WorkflowPanel() {
           <SelectContent
             alignItemWithTrigger={false}
             align="start"
-            className="min-w-[240px] max-w-[360px]"
+            className="min-w-[280px] max-w-[480px]"
           >
             {deptList.map((d: Department) => (
               <SelectItem
@@ -343,7 +343,7 @@ function WorkflowPanel() {
           onValueChange={(v) => setWorkflowId(v ?? '')}
           disabled={!departmentId || workflows.length === 0}
         >
-          <SelectTrigger className="h-10 w-[280px] bg-card px-3 text-[13px]">
+          <SelectTrigger className="h-10 min-w-[260px] max-w-[360px] bg-card px-3 text-[13px]">
             <SelectValue
               placeholder={
                 !departmentId
@@ -359,7 +359,7 @@ function WorkflowPanel() {
           <SelectContent
             alignItemWithTrigger={false}
             align="start"
-            className="min-w-[280px] max-w-[420px]"
+            className="min-w-[320px] max-w-[560px]"
           >
             {workflows.map((w) => (
               <SelectItem
