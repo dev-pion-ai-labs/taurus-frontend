@@ -1,8 +1,17 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
-/* Display / heading font. Body stays on Inter (loaded via next/font in layout.tsx). */
-@import url("https://api.fontshare.com/v2/css?f[]=general-sans@500,600,700&display=swap");
+
+/* Display / heading font — General Sans variable, self-hosted from /public.
+   Single variable woff2 covers weights 200–700; Inter (next/font) handles body. */
+@font-face {
+  font-family: "General Sans";
+  src: url("/font/GeneralSans_Complete/Fonts/WEB/fonts/GeneralSans-Variable.woff2")
+    format("woff2-variations");
+  font-weight: 200 700;
+  font-style: normal;
+  font-display: swap;
+}
 
 @plugin "@tailwindcss/typography";
 
@@ -13,8 +22,9 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-sans);
   --font-mono: var(--font-geist-mono);
-  /* Display font for headings — falls back to Inter if Fontshare fails to load. */
-  --font-heading: "General Sans", var(--font-sans);
+  /* Aliased from :root below so the variable is also available as
+     var(--font-heading) in raw CSS (e.g. the h1-h4 base rule). */
+  --font-heading: var(--font-heading);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -100,6 +110,12 @@
   --sidebar-accent-foreground: #E11D48;
   --sidebar-border: #E7E5E4;
   --sidebar-ring: #1C1917;
+
+  /* Heading font — emitted as a real CSS variable so it resolves in both
+     Tailwind utilities (font-heading) and raw CSS (h1-h4 base rule).
+     Falls back to Inter (--font-sans, set by next/font) if the @font-face
+     above fails to load. */
+  --font-heading: "General Sans", var(--font-sans);
 }
 
 @layer base {
