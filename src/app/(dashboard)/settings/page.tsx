@@ -6,7 +6,23 @@ import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { toast } from 'sonner';
 import { motion, type Variants } from 'framer-motion';
-import { Loader2, ChevronLeft, ChevronRight, ExternalLink } from 'lucide-react';
+import { Loader2, ChevronLeft, ChevronRight, ExternalLink, AlertTriangle, CheckCircle2 } from 'lucide-react';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from '@/components/ui/dialog';
+import {
+  ProviderIcon,
+  getProviderBrand,
+} from '@/components/integrations/provider-brand';
+import {
+  brandedSuccessToast,
+  brandedErrorToast,
+} from '@/components/integrations/branded-toast';
 
 import { useMe, useUpdateMe } from '@/hooks/use-user';
 import {
@@ -619,6 +635,30 @@ const SUPPORTED_PROVIDERS: ReadonlySet<IntegrationProvider> = new Set([
   'SALESFORCE',
 ]);
 
+function prettyName(provider: IntegrationProvider): string {
+  return provider
+    .split('_')
+    .map((p) => p.charAt(0) + p.slice(1).toLowerCase())
+    .join(' ');
+}
+
+function formatRelativeDate(iso: string): string {
+  const d = new Date(iso);
+  const now = new Date();
+  const diffMs = now.getTime() - d.getTime();
+  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+  if (diffDays === 0) return 'today';
+  if (diffDays === 1) return 'yesterday';
+  if (diffDays < 7) return `${diffDays} days ago`;
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+}
+
+interface DisconnectTarget {
+  id: string;
+  provider: IntegrationProvider;
+  name: string;
+}
+
 function IntegrationsTab() {
   const { data: connections, isLoading } = useIntegrations();
   const getAuthorizeUrl = useGetAuthorizeUrl();
@@ -630,6 +670,8 @@ function IntegrationsTab() {
   const [pendingProvider, setPendingProvider] =
     useState<IntegrationProvider | null>(null);
   const [disconnectingId, setDisconnectingId] = useState<string | null>(null);
+  const [disconnectTarget, setDisconnectTarget] =
+    useState<DisconnectTarget | null>(null);
 
   // Check URL for OAuth callback code
   useEffect(() => {
@@ -639,25 +681,51 @@ function IntegrationsTab() {
 
     if (code && stateParam) {
       try {
-        const state = JSON.parse(atob(stateParam));
-        const provider = state.provider as IntegrationProvider;
-        setPendingProvider(provider);
+        // State payload may be either legacy plain-base64 JSON or the new
+        // "h1:<sig>:<body>" form. We only need the provider hint for UX —
+        // the real verification happens server-side in the callback.
+        let provider: IntegrationProvider | null = null;
+        try {
+          const parts = stateParam.split(':');
+          const body = parts.length === 3 ? parts[2] : stateParam;
+          const decoded = JSON.parse(atob(body));
+          provider = decoded.provider as IntegrationProvider;
+        } catch {
+          /* ignore — fall through to connect attempt without local provider hint */
+        }
+        if (provider) setPendingProvider(provider);
 
         connectIntegration.mutate(
           {
-            provider,
+            provider: provider ?? '',
             code,
             redirectUri: `${window.location.origin}/settings?tab=integrations`,
             state: stateParam,
           },
           {
-            onSuccess: () => {
-              toast.success(`${provider.replace(/_/g, ' ')} connected successfully`);
+            onSuccess: (data) => {
+              if (data.provider) {
+                brandedSuccessToast(
+                  data.provider,
+                  `${prettyName(data.provider)} connected`,
+                  data.externalTeamName
+                    ? `Connected to ${data.externalTeamName}.`
+                    : 'You can now use it across Taurus.',
+                );
+              }
               window.history.replaceState({}, '', '/settings?tab=integrations');
               setPendingProvider(null);
             },
             onError: () => {
-              toast.error('Failed to connect — please try again');
+              if (provider) {
+                brandedErrorToast(
+                  provider,
+                  `Couldn't connect ${prettyName(provider)}`,
+                  'The authorization code may have expired — please try again.',
+                );
+              } else {
+                toast.error('Failed to connect — please try again');
+              }
               window.history.replaceState({}, '', '/settings?tab=integrations');
               setPendingProvider(null);
             },
@@ -669,10 +737,8 @@ function IntegrationsTab() {
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const connectedMap = new Map(
-    (connections ?? [])
-      .filter((c) => c.status === 'CONNECTED')
-      .map((c) => [c.provider, c]),
+  const connectionMap = new Map(
+    (connections ?? []).map((c) => [c.provider, c]),
   );
 
   function handleConnect(provider: IntegrationProvider) {
@@ -687,8 +753,11 @@ function IntegrationsTab() {
           window.location.href = data.url;
         },
         onError: (err) => {
-          toast.error(
-            err.message || `${provider} is not configured yet — add OAuth credentials to enable.`,
+          brandedErrorToast(
+            provider,
+            `${prettyName(provider)} isn't configured`,
+            err.message ||
+              'OAuth credentials are missing on the server — please contact your admin.',
           );
           setPendingProvider(null);
         },
@@ -696,15 +765,26 @@ function IntegrationsTab() {
     );
   }
 
-  function handleDisconnect(id: string, name: string) {
-    setDisconnectingId(id);
-    disconnectIntegration.mutate(id, {
+  function confirmDisconnect() {
+    if (!disconnectTarget) return;
+    const target = disconnectTarget;
+    setDisconnectingId(target.id);
+    disconnectIntegration.mutate(target.id, {
       onSuccess: () => {
-        toast.success(`${name} disconnected`);
+        brandedSuccessToast(
+          target.provider,
+          `${target.name} disconnected`,
+          'Tokens have been revoked locally. You can reconnect anytime.',
+        );
         setDisconnectingId(null);
+        setDisconnectTarget(null);
       },
       onError: () => {
-        toast.error(`Failed to disconnect ${name}`);
+        brandedErrorToast(
+          target.provider,
+          `Failed to disconnect ${target.name}`,
+          'Please try again in a moment.',
+        );
         setDisconnectingId(null);
       },
     });
@@ -733,79 +813,182 @@ function IntegrationsTab() {
           {isLoading ? (
             <div className="grid gap-3 sm:grid-cols-2">
               {Array.from({ length: 4 }).map((_, i) => (
-                <Skeleton key={i} className="h-32 rounded-xl" />
+                <div
+                  key={i}
+                  className="flex items-start gap-4 rounded-xl border border-[#E7E5E4] bg-white p-4"
+                >
+                  <Skeleton className="h-10 w-10 rounded-lg" />
+                  <div className="flex-1 space-y-2">
+                    <Skeleton className="h-3.5 w-24" />
+                    <Skeleton className="h-3 w-full" />
+                    <Skeleton className="h-3 w-3/4" />
+                    <Skeleton className="mt-2 h-7 w-20 rounded-full" />
+                  </div>
+                </div>
               ))}
             </div>
           ) : (
             <div className="grid gap-3 sm:grid-cols-2">
               {INTEGRATION_CATALOG.map((integration) => {
-                const connected = connectedMap.get(integration.provider);
+                const connection = connectionMap.get(integration.provider);
+                const isConnected = connection?.status === 'CONNECTED';
+                const isExpired = connection?.status === 'EXPIRED' || connection?.status === 'ERROR';
                 const supported = SUPPORTED_PROVIDERS.has(integration.provider);
                 const isPending = pendingProvider === integration.provider;
+                const brand = getProviderBrand(integration.provider);
+
+                // Connected: brand-tinted gradient. Expired: amber wash so
+                // it's visually distinct from a healthy connection but
+                // doesn't read as "broken/red". Default: clean white card.
+                const cardStyle: React.CSSProperties = isConnected
+                  ? {
+                      background: brand.gradient,
+                      borderColor: `${brand.accent}40`,
+                    }
+                  : isExpired
+                    ? {
+                        background: 'linear-gradient(135deg, #FFFBEB 0%, #FEF3C7 100%)',
+                        borderColor: '#FCD34D',
+                      }
+                    : {};
 
                 return (
                   <motion.div
                     key={integration.provider}
                     variants={itemVariants}
-                    className={`flex items-start gap-4 rounded-xl border p-4 transition-colors ${
-                      connected
-                        ? 'border-emerald-200 bg-emerald-50/50'
-                        : 'border-[#E7E5E4] hover:border-[#D6D3D1]'
+                    whileHover={supported && !isConnected ? { y: -1 } : undefined}
+                    className={`group relative flex items-start gap-4 rounded-xl border p-4 transition-all ${
+                      isConnected || isExpired
+                        ? ''
+                        : supported
+                          ? 'border-[#E7E5E4] bg-white hover:border-[#D6D3D1] hover:shadow-sm'
+                          : 'border-[#E7E5E4] bg-[#FAFAF9] opacity-75'
                     }`}
+                    style={cardStyle}
                   >
+                    {/* Brand-coloured rail on connected cards */}
+                    {isConnected && (
+                      <div
+                        className="absolute left-0 top-3 bottom-3 w-0.5 rounded-r-full"
+                        style={{ backgroundColor: brand.accent }}
+                        aria-hidden
+                      />
+                    )}
+
                     <div
-                      className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-white text-sm font-bold"
-                      style={{ backgroundColor: integration.color }}
+                      className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-white shadow-sm ring-1 ${
+                        isConnected ? '' : 'ring-[#E7E5E4]'
+                      }`}
+                      style={
+                        isConnected
+                          ? { boxShadow: `0 0 0 1px ${brand.accent}33, 0 1px 2px rgba(0,0,0,0.04)` }
+                          : undefined
+                      }
                     >
-                      {integration.name.charAt(0)}
+                      <ProviderIcon
+                        provider={integration.provider}
+                        className="w-6 h-6"
+                        muted={!supported && !isConnected}
+                      />
                     </div>
+
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <p className="text-sm font-semibold text-[#1C1917]">
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <p
+                          className="text-sm font-semibold"
+                          style={{ color: isConnected ? brand.ink : '#1C1917' }}
+                        >
                           {integration.name}
                         </p>
-                        <span className="text-[10px] font-medium text-[#A8A29E] bg-[#F5F5F4] px-2 py-0.5 rounded-full">
+                        <span className="text-[10px] font-medium text-[#A8A29E] bg-white/70 px-2 py-0.5 rounded-full ring-1 ring-[#E7E5E4]/60">
                           {integration.category}
                         </span>
-                        {connected && (
-                          <span className="text-[10px] font-semibold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full">
+                        {isConnected && (
+                          <span
+                            className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full"
+                            style={{
+                              color: brand.accent,
+                              backgroundColor: `${brand.accent}15`,
+                              border: `1px solid ${brand.accent}33`,
+                            }}
+                          >
+                            <span
+                              className="h-1.5 w-1.5 rounded-full"
+                              style={{ backgroundColor: brand.accent }}
+                            />
                             Connected
                           </span>
                         )}
-                        {!supported && !connected && (
-                          <span className="text-[10px] font-semibold text-amber-700 bg-amber-100 px-2 py-0.5 rounded-full">
-                            Coming Soon
+                        {isExpired && (
+                          <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-amber-800 bg-amber-100 border border-amber-300 px-2 py-0.5 rounded-full">
+                            <AlertTriangle className="w-2.5 h-2.5" />
+                            Reconnect needed
+                          </span>
+                        )}
+                        {!supported && !isConnected && !isExpired && (
+                          <span className="text-[10px] font-semibold text-[#78716C] bg-[#F5F5F4] border border-[#E7E5E4] px-2 py-0.5 rounded-full">
+                            Coming soon
                           </span>
                         )}
                       </div>
-                      <p className="text-xs text-[#78716C] mt-1 leading-relaxed">
+                      <p
+                        className="text-xs mt-1 leading-relaxed"
+                        style={{
+                          color: isConnected ? `${brand.ink}CC` : '#78716C',
+                        }}
+                      >
                         {integration.description}
                       </p>
-                      {connected ? (
-                        <div className="mt-3">
-                          {connected.externalTeamName && (
-                            <p className="text-xs text-[#57534E] mb-2">
-                              <span className="text-[#A8A29E]">Connected to: </span>
-                              <span className="font-semibold text-[#1C1917]">
-                                {connected.externalTeamName}
+
+                      {isConnected && connection && (
+                        <div className="mt-2.5 flex items-center gap-2 text-[11px]" style={{ color: `${brand.ink}AA` }}>
+                          {connection.externalTeamName && (
+                            <>
+                              <span className="font-semibold" style={{ color: brand.ink }}>
+                                {connection.externalTeamName}
                               </span>
-                            </p>
+                              <span>·</span>
+                            </>
                           )}
+                          <span>Connected {formatRelativeDate(connection.connectedAt)}</span>
+                        </div>
+                      )}
+
+                      {isConnected ? (
+                        <div className="mt-3">
                           <Button
                             size="sm"
                             variant="outline"
-                            className="h-7 text-xs rounded-full text-red-600 hover:text-red-700 hover:bg-red-50"
+                            className="h-7 text-xs rounded-full bg-white/80 hover:bg-white border-[#E7E5E4] text-[#57534E] hover:text-red-700 hover:border-red-200"
                             onClick={() =>
-                              handleDisconnect(connected.id, integration.name)
+                              setDisconnectTarget({
+                                id: connection!.id,
+                                provider: integration.provider,
+                                name: integration.name,
+                              })
                             }
-                            disabled={disconnectingId === connected.id}
+                            disabled={disconnectingId === connection!.id}
                           >
-                            {disconnectingId === connected.id && (
+                            {disconnectingId === connection!.id && (
                               <Loader2 className="w-3 h-3 mr-1.5 animate-spin" />
                             )}
                             Disconnect
                           </Button>
                         </div>
+                      ) : isExpired ? (
+                        <Button
+                          size="sm"
+                          className="mt-3 h-8 text-xs rounded-full bg-amber-600 hover:bg-amber-700 text-white"
+                          onClick={() => handleConnect(integration.provider)}
+                          disabled={isPending}
+                        >
+                          {isPending ? (
+                            <Loader2 className="w-3 h-3 mr-1.5 animate-spin" />
+                          ) : (
+                            <ExternalLink className="w-3 h-3 mr-1.5" />
+                          )}
+                          {isPending ? 'Reconnecting…' : 'Reconnect'}
+                        </Button>
                       ) : (
                         <Button
                           size="sm"
@@ -819,7 +1002,7 @@ function IntegrationsTab() {
                           ) : (
                             <ExternalLink className="w-3 h-3 mr-1.5" />
                           )}
-                          {isPending ? 'Connecting…' : 'Connect'}
+                          {isPending ? 'Connecting…' : supported ? 'Connect' : 'Coming soon'}
                         </Button>
                       )}
                     </div>
@@ -850,6 +1033,72 @@ function IntegrationsTab() {
           </Button>
         </div>
       </motion.div>
+
+      {/* Disconnect confirmation */}
+      <Dialog
+        open={disconnectTarget !== null}
+        onOpenChange={(open) => {
+          if (!open && !disconnectingId) setDisconnectTarget(null);
+        }}
+      >
+        <DialogContent className="sm:max-w-md">
+          {disconnectTarget && (
+            <>
+              <div
+                className="absolute inset-x-0 top-0 h-1 rounded-t-xl"
+                style={{ backgroundColor: getProviderBrand(disconnectTarget.provider).accent }}
+                aria-hidden
+              />
+              <DialogHeader>
+                <div className="flex items-start gap-3">
+                  <div
+                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-white shadow-sm"
+                    style={{
+                      boxShadow: `0 0 0 1px ${getProviderBrand(disconnectTarget.provider).accent}33`,
+                    }}
+                  >
+                    <ProviderIcon provider={disconnectTarget.provider} className="w-5 h-5" />
+                  </div>
+                  <div className="flex-1">
+                    <DialogTitle>Disconnect {disconnectTarget.name}?</DialogTitle>
+                    <DialogDescription className="mt-1">
+                      Taurus will stop sending and receiving data from{' '}
+                      <span className="font-semibold text-[#1C1917]">
+                        {disconnectTarget.name}
+                      </span>
+                      . You can reconnect anytime — your settings are preserved.
+                    </DialogDescription>
+                  </div>
+                </div>
+              </DialogHeader>
+              <DialogFooter className="mt-2">
+                <Button
+                  variant="outline"
+                  onClick={() => setDisconnectTarget(null)}
+                  disabled={disconnectingId === disconnectTarget.id}
+                  className="rounded-full"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={confirmDisconnect}
+                  disabled={disconnectingId === disconnectTarget.id}
+                  className="rounded-full bg-red-600 hover:bg-red-700 text-white"
+                >
+                  {disconnectingId === disconnectTarget.id ? (
+                    <>
+                      <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
+                      Disconnecting…
+                    </>
+                  ) : (
+                    'Disconnect'
+                  )}
+                </Button>
+              </DialogFooter>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
     </motion.div>
   );
 }
