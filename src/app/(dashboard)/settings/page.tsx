@@ -608,11 +608,28 @@ const INTEGRATION_CATALOG: {
   },
 ];
 
+// Providers wired up server-side. Cards outside this set render as
+// "Coming Soon" so users don't get a backend "OAuth not supported" toast.
+const SUPPORTED_PROVIDERS: ReadonlySet<IntegrationProvider> = new Set([
+  'SLACK',
+  'GOOGLE_DRIVE',
+  'JIRA',
+  'NOTION',
+  'HUBSPOT',
+  'SALESFORCE',
+]);
+
 function IntegrationsTab() {
   const { data: connections, isLoading } = useIntegrations();
   const getAuthorizeUrl = useGetAuthorizeUrl();
   const disconnectIntegration = useDisconnectIntegration();
   const connectIntegration = useConnectIntegration();
+
+  // Provider whose OAuth flow is currently in flight. Per-card so other
+  // cards stay interactive while one is connecting / completing callback.
+  const [pendingProvider, setPendingProvider] =
+    useState<IntegrationProvider | null>(null);
+  const [disconnectingId, setDisconnectingId] = useState<string | null>(null);
 
   // Check URL for OAuth callback code
   useEffect(() => {
@@ -623,7 +640,8 @@ function IntegrationsTab() {
     if (code && stateParam) {
       try {
         const state = JSON.parse(atob(stateParam));
-        const provider = state.provider as string;
+        const provider = state.provider as IntegrationProvider;
+        setPendingProvider(provider);
 
         connectIntegration.mutate(
           {
@@ -635,12 +653,13 @@ function IntegrationsTab() {
           {
             onSuccess: () => {
               toast.success(`${provider.replace(/_/g, ' ')} connected successfully`);
-              // Clean URL
               window.history.replaceState({}, '', '/settings?tab=integrations');
+              setPendingProvider(null);
             },
             onError: () => {
               toast.error('Failed to connect — please try again');
               window.history.replaceState({}, '', '/settings?tab=integrations');
+              setPendingProvider(null);
             },
           },
         );
@@ -658,27 +677,36 @@ function IntegrationsTab() {
 
   function handleConnect(provider: IntegrationProvider) {
     const redirectUri = `${window.location.origin}/settings?tab=integrations`;
+    setPendingProvider(provider);
 
     getAuthorizeUrl.mutate(
       { provider, redirectUri },
       {
         onSuccess: (data) => {
-          // Redirect to OAuth provider
+          // Full-page redirect; pending state implicitly cleared on unmount.
           window.location.href = data.url;
         },
         onError: (err) => {
           toast.error(
             err.message || `${provider} is not configured yet — add OAuth credentials to enable.`,
           );
+          setPendingProvider(null);
         },
       },
     );
   }
 
   function handleDisconnect(id: string, name: string) {
+    setDisconnectingId(id);
     disconnectIntegration.mutate(id, {
-      onSuccess: () => toast.success(`${name} disconnected`),
-      onError: () => toast.error(`Failed to disconnect ${name}`),
+      onSuccess: () => {
+        toast.success(`${name} disconnected`);
+        setDisconnectingId(null);
+      },
+      onError: () => {
+        toast.error(`Failed to disconnect ${name}`);
+        setDisconnectingId(null);
+      },
     });
   }
 
@@ -712,6 +740,8 @@ function IntegrationsTab() {
             <div className="grid gap-3 sm:grid-cols-2">
               {INTEGRATION_CATALOG.map((integration) => {
                 const connected = connectedMap.get(integration.provider);
+                const supported = SUPPORTED_PROVIDERS.has(integration.provider);
+                const isPending = pendingProvider === integration.provider;
 
                 return (
                   <motion.div
@@ -742,6 +772,11 @@ function IntegrationsTab() {
                             Connected
                           </span>
                         )}
+                        {!supported && !connected && (
+                          <span className="text-[10px] font-semibold text-amber-700 bg-amber-100 px-2 py-0.5 rounded-full">
+                            Coming Soon
+                          </span>
+                        )}
                       </div>
                       <p className="text-xs text-[#78716C] mt-1 leading-relaxed">
                         {integration.description}
@@ -763,8 +798,11 @@ function IntegrationsTab() {
                             onClick={() =>
                               handleDisconnect(connected.id, integration.name)
                             }
-                            disabled={disconnectIntegration.isPending}
+                            disabled={disconnectingId === connected.id}
                           >
+                            {disconnectingId === connected.id && (
+                              <Loader2 className="w-3 h-3 mr-1.5 animate-spin" />
+                            )}
                             Disconnect
                           </Button>
                         </div>
@@ -774,14 +812,14 @@ function IntegrationsTab() {
                           variant="outline"
                           className="mt-3 h-8 text-xs rounded-full"
                           onClick={() => handleConnect(integration.provider)}
-                          disabled={getAuthorizeUrl.isPending}
+                          disabled={!supported || isPending}
                         >
-                          {getAuthorizeUrl.isPending ? (
+                          {isPending ? (
                             <Loader2 className="w-3 h-3 mr-1.5 animate-spin" />
                           ) : (
                             <ExternalLink className="w-3 h-3 mr-1.5" />
                           )}
-                          Connect
+                          {isPending ? 'Connecting…' : 'Connect'}
                         </Button>
                       )}
                     </div>
