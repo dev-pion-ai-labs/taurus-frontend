@@ -575,11 +575,11 @@ const INTEGRATION_CATALOG: {
     color: '#4A154B',
   },
   {
-    provider: 'MICROSOFT_TEAMS',
-    name: 'Microsoft Teams',
-    description: 'Receive deployment notifications and team updates in Teams.',
-    category: 'Communication',
-    color: '#5B5FC7',
+    provider: 'NOTION',
+    name: 'Notion',
+    description: 'Sync transformation docs and action items to your Notion workspace.',
+    category: 'Productivity',
+    color: '#000000',
   },
   {
     provider: 'JIRA',
