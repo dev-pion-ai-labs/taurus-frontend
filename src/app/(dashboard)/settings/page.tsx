@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -1107,8 +1108,26 @@ function IntegrationsTab() {
 // Main page
 // ---------------------------------------------------------------------------
 
+const VALID_TABS = ['profile', 'organization', 'integrations'] as const;
+type SettingsTab = (typeof VALID_TABS)[number];
+
 export default function SettingsPage() {
   const { data: user, isLoading } = useMe();
+  const router = useRouter();
+  const searchParams = useSearchParams();
+
+  const tabParam = searchParams.get('tab');
+  const activeTab: SettingsTab = (VALID_TABS as readonly string[]).includes(
+    tabParam ?? '',
+  )
+    ? (tabParam as SettingsTab)
+    : 'profile';
+
+  const handleTabChange = (value: string) => {
+    const params = new URLSearchParams(searchParams.toString());
+    params.set('tab', value);
+    router.replace(`/settings?${params.toString()}`, { scroll: false });
+  };
 
   if (isLoading || !user) {
     return (
@@ -1145,7 +1164,7 @@ export default function SettingsPage() {
       </motion.h1>
 
       {/* Tabs */}
-      <Tabs defaultValue="profile">
+      <Tabs value={activeTab} onValueChange={handleTabChange}>
         <motion.div variants={itemVariants}>
           <TabsList variant="line" className="mb-6">
             <TabsTrigger value="profile">Profile</TabsTrigger>
