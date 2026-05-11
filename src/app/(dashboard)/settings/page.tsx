@@ -7,7 +7,7 @@ import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { toast } from 'sonner';
 import { motion, type Variants } from 'framer-motion';
-import { Loader2, ChevronLeft, ChevronRight, ExternalLink, AlertTriangle, CheckCircle2 } from 'lucide-react';
+import { Loader2, ChevronLeft, ChevronRight, AlertTriangle, CheckCircle2 } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -617,11 +617,11 @@ const INTEGRATION_CATALOG: {
     color: '#FF4A00',
   },
   {
-    provider: 'NOTION',
-    name: 'Notion',
-    description: 'Sync implementation plans and checklists to Notion pages.',
-    category: 'Productivity',
-    color: '#000000',
+    provider: 'MICROSOFT_TEAMS',
+    name: 'Microsoft Teams',
+    description: 'Coming soon — collaborate on transformations directly in Teams.',
+    category: 'Communication',
+    color: '#4B53BC',
   },
 ];
 
@@ -838,171 +838,115 @@ function IntegrationsTab() {
                 const isPending = pendingProvider === integration.provider;
                 const brand = getProviderBrand(integration.provider);
 
-                // Connected: brand-tinted gradient. Expired: amber wash so
-                // it's visually distinct from a healthy connection but
-                // doesn't read as "broken/red". Default: clean white card.
-                const cardStyle: React.CSSProperties = isConnected
-                  ? {
-                      background: brand.gradient,
-                      borderColor: `${brand.accent}40`,
-                    }
-                  : isExpired
-                    ? {
-                        background: 'linear-gradient(135deg, #FFFBEB 0%, #FEF3C7 100%)',
-                        borderColor: '#FCD34D',
-                      }
-                    : {};
-
                 return (
                   <motion.div
                     key={integration.provider}
                     variants={itemVariants}
                     whileHover={supported && !isConnected ? { y: -1 } : undefined}
-                    className={`group relative flex items-start gap-4 rounded-xl border p-4 transition-all ${
-                      isConnected || isExpired
-                        ? ''
-                        : supported
-                          ? 'border-[#E7E5E4] bg-white hover:border-[#D6D3D1] hover:shadow-sm'
-                          : 'border-[#E7E5E4] bg-[#FAFAF9] opacity-75'
+                    className={`group relative flex flex-col rounded-xl border border-[#E7E5E4] bg-white p-4 transition-all ${
+                      supported || isConnected
+                        ? 'hover:border-[#D6D3D1] hover:shadow-sm'
+                        : 'opacity-75'
                     }`}
-                    style={cardStyle}
                   >
-                    {isConnected && (
-                      <div
-                        className="absolute left-0 top-4 bottom-4 w-px rounded-r-full opacity-40"
-                        style={{ backgroundColor: brand.accent }}
-                        aria-hidden
-                      />
-                    )}
-
-                    <div
-                      className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-white shadow-sm ring-1 ${
-                        isConnected ? '' : 'ring-[#E7E5E4]'
-                      }`}
-                      style={
-                        isConnected
-                          ? { boxShadow: `0 0 0 1px ${brand.accent}33, 0 1px 2px rgba(0,0,0,0.04)` }
-                          : undefined
-                      }
-                    >
-                      <ProviderIcon
-                        provider={integration.provider}
-                        className="w-6 h-6"
-                        muted={!supported && !isConnected}
-                      />
+                    <div className="flex items-center justify-between">
+                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[#FAFAF9] ring-1 ring-[#E7E5E4]">
+                        <ProviderIcon
+                          provider={integration.provider}
+                          className="w-5 h-5"
+                          muted={!supported && !isConnected}
+                        />
+                      </div>
+                      {isConnected ? (
+                        <span
+                          className="inline-flex items-center gap-1.5 text-[10px] font-medium px-2 py-0.5 rounded-full"
+                          style={{
+                            color: brand.accent,
+                            backgroundColor: `${brand.accent}12`,
+                          }}
+                        >
+                          <span
+                            className="h-1.5 w-1.5 rounded-full"
+                            style={{ backgroundColor: brand.accent }}
+                          />
+                          Connected
+                        </span>
+                      ) : isExpired ? (
+                        <span className="inline-flex items-center gap-1 text-[10px] font-medium text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full">
+                          <AlertTriangle className="w-2.5 h-2.5" />
+                          Reconnect
+                        </span>
+                      ) : !supported ? (
+                        <span className="text-[10px] font-medium text-[#A8A29E] px-2 py-0.5 rounded-full bg-[#F5F5F4]">
+                          Coming soon
+                        </span>
+                      ) : null}
                     </div>
 
-                    <div className="flex-1 min-w-0">
-                      <div className="flex flex-wrap items-center gap-1.5">
-                        <p
-                          className="text-sm font-semibold"
-                          style={{ color: isConnected ? brand.ink : '#1C1917' }}
-                        >
-                          {integration.name}
-                        </p>
-                        <span className="text-[10px] font-medium text-[#A8A29E] bg-white/70 px-2 py-0.5 rounded-full ring-1 ring-[#E7E5E4]/60">
-                          {integration.category}
-                        </span>
-                        {isConnected && (
-                          <span
-                            className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full"
-                            style={{
-                              color: brand.accent,
-                              backgroundColor: `${brand.accent}15`,
-                              border: `1px solid ${brand.accent}33`,
-                            }}
-                          >
-                            <span
-                              className="h-1.5 w-1.5 rounded-full"
-                              style={{ backgroundColor: brand.accent }}
-                            />
-                            Connected
-                          </span>
-                        )}
-                        {isExpired && (
-                          <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-amber-800 bg-amber-100 border border-amber-300 px-2 py-0.5 rounded-full">
-                            <AlertTriangle className="w-2.5 h-2.5" />
-                            Reconnect needed
-                          </span>
-                        )}
-                        {!supported && !isConnected && !isExpired && (
-                          <span className="text-[10px] font-semibold text-[#78716C] bg-[#F5F5F4] border border-[#E7E5E4] px-2 py-0.5 rounded-full">
-                            Coming soon
-                          </span>
-                        )}
-                      </div>
-                      <p
-                        className="text-xs mt-1 leading-relaxed"
-                        style={{
-                          color: isConnected ? `${brand.ink}CC` : '#78716C',
-                        }}
-                      >
+                    <div className="mt-3 min-w-0">
+                      <p className="text-sm font-semibold text-[#1C1917]">
+                        {integration.name}
+                      </p>
+                      <p className="text-xs mt-1 leading-relaxed text-[#78716C] line-clamp-2">
                         {integration.description}
                       </p>
+                    </div>
 
-                      {isConnected && connection && (
-                        <div className="mt-2.5 flex items-center gap-2 text-[11px]" style={{ color: `${brand.ink}AA` }}>
-                          {connection.externalTeamName && (
-                            <>
-                              <span className="font-semibold" style={{ color: brand.ink }}>
-                                {connection.externalTeamName}
-                              </span>
-                              <span>·</span>
-                            </>
-                          )}
-                          <span>Connected {formatRelativeDate(connection.connectedAt)}</span>
-                        </div>
-                      )}
+                    {isConnected && connection && (
+                      <p className="mt-2 text-[11px] text-[#A8A29E]">
+                        {connection.externalTeamName && (
+                          <span className="text-[#57534E] font-medium">
+                            {connection.externalTeamName} ·{' '}
+                          </span>
+                        )}
+                        Connected {formatRelativeDate(connection.connectedAt)}
+                      </p>
+                    )}
 
+                    <div className="mt-3 pt-3 border-t border-[#F5F5F4]">
                       {isConnected ? (
-                        <div className="mt-3">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="h-7 text-xs rounded-full bg-white/80 hover:bg-white border-[#E7E5E4] text-[#57534E] hover:text-red-700 hover:border-red-200"
-                            onClick={() =>
-                              setDisconnectTarget({
-                                id: connection!.id,
-                                provider: integration.provider,
-                                name: integration.name,
-                              })
-                            }
-                            disabled={disconnectingId === connection!.id}
-                          >
-                            {disconnectingId === connection!.id && (
-                              <Loader2 className="w-3 h-3 mr-1.5 animate-spin" />
-                            )}
-                            Disconnect
-                          </Button>
-                        </div>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-7 w-full text-xs rounded-md text-[#78716C] hover:text-red-700 hover:bg-red-50"
+                          onClick={() =>
+                            setDisconnectTarget({
+                              id: connection!.id,
+                              provider: integration.provider,
+                              name: integration.name,
+                            })
+                          }
+                          disabled={disconnectingId === connection!.id}
+                        >
+                          {disconnectingId === connection!.id && (
+                            <Loader2 className="w-3 h-3 mr-1.5 animate-spin" />
+                          )}
+                          Disconnect
+                        </Button>
                       ) : isExpired ? (
                         <Button
                           size="sm"
-                          className="mt-3 h-8 text-xs rounded-full bg-amber-600 hover:bg-amber-700 text-white"
+                          className="h-7 w-full text-xs rounded-md bg-amber-600 hover:bg-amber-700 text-white"
                           onClick={() => handleConnect(integration.provider)}
                           disabled={isPending}
                         >
                           {isPending ? (
                             <Loader2 className="w-3 h-3 mr-1.5 animate-spin" />
-                          ) : (
-                            <ExternalLink className="w-3 h-3 mr-1.5" />
-                          )}
+                          ) : null}
                           {isPending ? 'Reconnecting…' : 'Reconnect'}
                         </Button>
                       ) : (
                         <Button
                           size="sm"
                           variant="outline"
-                          className="mt-3 h-8 text-xs rounded-full"
+                          className="h-7 w-full text-xs rounded-md"
                           onClick={() => handleConnect(integration.provider)}
                           disabled={!supported || isPending}
                         >
                           {isPending ? (
                             <Loader2 className="w-3 h-3 mr-1.5 animate-spin" />
-                          ) : (
-                            <ExternalLink className="w-3 h-3 mr-1.5" />
-                          )}
-                          {isPending ? 'Connecting…' : supported ? 'Connect' : 'Coming soon'}
+                          ) : null}
+                          {isPending ? 'Connecting…' : supported ? 'Connect' : 'Unavailable'}
                         </Button>
                       )}
                     </div>
@@ -1111,11 +1055,15 @@ export default function SettingsPage() {
   const searchParams = useSearchParams();
 
   const tabParam = searchParams.get('tab');
-  const urlTab: SettingsTab = (VALID_TABS as readonly string[]).includes(
-    tabParam ?? '',
-  )
-    ? (tabParam as SettingsTab)
-    : 'profile';
+  // If we're handling an OAuth callback (code + state in URL) force the
+  // integrations tab so its mount-time callback handler actually runs.
+  const isOAuthCallback =
+    searchParams.get('code') !== null && searchParams.get('state') !== null;
+  const urlTab: SettingsTab = isOAuthCallback
+    ? 'integrations'
+    : (VALID_TABS as readonly string[]).includes(tabParam ?? '')
+      ? (tabParam as SettingsTab)
+      : 'profile';
 
   const [activeTab, setActiveTab] = useState<SettingsTab>(urlTab);
 
