@@ -867,10 +867,9 @@ function IntegrationsTab() {
                     }`}
                     style={cardStyle}
                   >
-                    {/* Brand-coloured rail on connected cards */}
                     {isConnected && (
                       <div
-                        className="absolute left-0 top-3 bottom-3 w-0.5 rounded-r-full"
+                        className="absolute left-0 top-4 bottom-4 w-px rounded-r-full opacity-40"
                         style={{ backgroundColor: brand.accent }}
                         aria-hidden
                       />
@@ -1045,11 +1044,6 @@ function IntegrationsTab() {
         <DialogContent className="sm:max-w-md">
           {disconnectTarget && (
             <>
-              <div
-                className="absolute inset-x-0 top-0 h-1 rounded-t-xl"
-                style={{ backgroundColor: getProviderBrand(disconnectTarget.provider).accent }}
-                aria-hidden
-              />
               <DialogHeader>
                 <div className="flex items-start gap-3">
                   <div
@@ -1117,13 +1111,22 @@ export default function SettingsPage() {
   const searchParams = useSearchParams();
 
   const tabParam = searchParams.get('tab');
-  const activeTab: SettingsTab = (VALID_TABS as readonly string[]).includes(
+  const urlTab: SettingsTab = (VALID_TABS as readonly string[]).includes(
     tabParam ?? '',
   )
     ? (tabParam as SettingsTab)
     : 'profile';
 
+  const [activeTab, setActiveTab] = useState<SettingsTab>(urlTab);
+
+  // Sync from URL (e.g. OAuth callback redirects to ?tab=integrations)
+  useEffect(() => {
+    if (urlTab !== activeTab) setActiveTab(urlTab);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [urlTab]);
+
   const handleTabChange = (value: string) => {
+    setActiveTab(value as SettingsTab);
     const params = new URLSearchParams(searchParams.toString());
     params.set('tab', value);
     router.replace(`/settings?${params.toString()}`, { scroll: false });
