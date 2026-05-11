@@ -843,11 +843,21 @@ function IntegrationsTab() {
                     key={integration.provider}
                     variants={itemVariants}
                     whileHover={supported && !isConnected ? { y: -1 } : undefined}
-                    className={`group relative flex flex-col rounded-xl border border-[#E7E5E4] bg-white p-4 transition-all ${
-                      supported || isConnected
-                        ? 'hover:border-[#D6D3D1] hover:shadow-sm'
-                        : 'opacity-75'
+                    className={`group relative flex flex-col rounded-xl border p-4 transition-all ${
+                      isConnected
+                        ? 'hover:shadow-sm'
+                        : supported
+                          ? 'border-[#E7E5E4] bg-white hover:border-[#D6D3D1] hover:shadow-sm'
+                          : 'border-[#E7E5E4] bg-white opacity-75'
                     }`}
+                    style={
+                      isConnected
+                        ? {
+                            background: `linear-gradient(135deg, ${brand.accent}08 0%, #FFFFFF 70%)`,
+                            borderColor: `${brand.accent}26`,
+                          }
+                        : undefined
+                    }
                   >
                     <div className="flex items-center justify-between">
                       <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[#FAFAF9] ring-1 ring-[#E7E5E4]">
