@@ -853,8 +853,8 @@ function IntegrationsTab() {
                     style={
                       isConnected
                         ? {
-                            background: `linear-gradient(135deg, ${brand.accent}08 0%, #FFFFFF 70%)`,
-                            borderColor: `${brand.accent}26`,
+                            background: `linear-gradient(135deg, ${brand.accent}1F 0%, ${brand.accent}0A 50%, #FFFFFF 100%)`,
+                            borderColor: `${brand.accent}55`,
                           }
                         : undefined
                     }
