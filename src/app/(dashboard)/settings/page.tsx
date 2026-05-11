@@ -913,7 +913,7 @@ function IntegrationsTab() {
                       </p>
                     )}
 
-                    <div className="mt-3 pt-3 border-t border-[#F5F5F4]">
+                    <div className="mt-auto pt-3 border-t border-[#F5F5F4]">
                       {isConnected ? (
                         <Button
                           size="sm"
